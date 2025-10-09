@@ -1,9 +1,15 @@
 from abc import ABC, abstractmethod
 
+from app.models.pipeline import PipelineResult
+
 
 class BaseLLMClient(ABC):
-    pass
+    _identifier: str | None = None
 
     @abstractmethod
     def check_connection(self) -> None:
+        pass
+
+    @abstractmethod
+    def run(self, text: str) -> PipelineResult:
         pass

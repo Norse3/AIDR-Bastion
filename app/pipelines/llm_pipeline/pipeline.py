@@ -10,27 +10,28 @@ settings = get_settings()
 
 class LLMPipeline(BasePipeline):
     """
-    OpenAI-based pipeline for analyzing prompts using AI language models.
+    LLM-based pipeline for analyzing prompts using AI language models.
 
-    This pipeline uses OpenAI's API to analyze prompts for potential issues,
+    This pipeline uses LLM's API to analyze prompts for potential issues,
     ethical concerns, or harmful content. It leverages advanced language
     models to provide intelligent analysis and decision-making.
 
     Attributes:
-        name (PipelineNames): Pipeline name (llm)
-        client (AsyncOpenAI): OpenAI API client
-        model (str): OpenAI model to use for analysis
+        _identifier (PipelineNames): Pipeline identifier (llm)
+        client (BaseLLMClient): LLM API client
+        model (str): LLM model to use for analysis
         enabled (bool): Whether pipeline is active (depends on API key availability)
         SYSTEM_PROMPT (str): System prompt for AI analysis
     """
 
-    name = PipelineNames.llm
+    _identifier = PipelineNames.llm
+    description = "LLM-based pipeline for analyzing prompts using AI language models."
 
     def __init__(self):
         """
-        Initializes OpenAI pipeline with API client and model configuration.
+        Initializes LLM pipeline with API client and model configuration.
 
-        Sets up the OpenAI API client with the provided API key and configures
+        Sets up the LLM API client with the provided API key and configures
         the model for analysis. Enables the pipeline if API key is available.
         """
         self.llm_manager = ALL_MANAGERS_MAP['llm']
@@ -45,9 +46,9 @@ class LLMPipeline(BasePipeline):
 
     async def run(self, prompt: str) -> PipelineResult:
         """
-        Performs AI-powered analysis of the prompt using OpenAI.
+        Performs AI-powered analysis of the prompt using LLM.
 
-        Sends the prompt to OpenAI API for analysis and processes the response
+        Sends the prompt to LLM API for analysis and processes the response
         to determine if the content should be blocked, allowed, or flagged
         for notification.
 

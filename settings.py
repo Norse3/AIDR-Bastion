@@ -1,4 +1,5 @@
 import json
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
@@ -6,7 +7,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.modules.logger import bastion_logger
+logger = logging.getLogger(__name__)
 
 
 class BaseSearchSettings(BaseModel):
@@ -31,10 +32,8 @@ class BaseSearchSettings(BaseModel):
             dict: Common configuration dictionary
         """
         return {
-            "hosts": [{"host": self.host, "port": self.port}],
-            "scheme": self.scheme,
+            "hosts": [f"{self.scheme}://{self.host}:{self.port}"],
             "http_auth": (self.user, self.password),
-            "use_ssl": True,
             "verify_certs": False,
             "ssl_show_warn": False,
             "retry_on_status": (500, 502, 503, 504),
@@ -85,7 +84,7 @@ def _load_version() -> str:
         with open(version_path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except Exception as e:
-        bastion_logger.error(f"Error reading VERSION file: {e}")
+        logger.error(f"Error reading VERSION file: {e}")
         return "unknown"
 
 
@@ -148,7 +147,7 @@ def load_pipeline_config() -> dict:
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, ValueError, KeyError) as e:
-        bastion_logger.error(f"Error reading config.json: {e}")
+        logger.error(f"Error reading config.json: {e}")
         return loaded_config
 
 

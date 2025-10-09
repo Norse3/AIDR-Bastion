@@ -31,7 +31,15 @@ async def get_flows_list() -> FlowsResponse:
     flows = []
 
     for flow_name, pipelines in pipeline_manager.pipeline_flows.items():
-        pipeline_infos = [PipelineInfo(name=pipeline.name, enabled=pipeline.enabled) for pipeline in pipelines]
+        pipeline_infos = [
+            PipelineInfo(
+                id=pipeline._identifier,
+                name=str(pipeline),
+                enabled=pipeline.enabled,
+                description=pipeline.description,
+            )
+            for pipeline in pipelines
+        ]
         flows.append(FlowInfo(flow_name=flow_name, pipelines=pipeline_infos))
 
     return FlowsResponse(flows=flows)

@@ -1,15 +1,28 @@
 from fastapi import APIRouter, HTTPException
 
 from app.managers import ALL_MANAGERS_MAP
+from app.core.manager import BaseManager
 from app.models.manager import (
     ManagersListResponse,
     ManagerInfo,
     SwitchActiveClientRequest,
     SwitchActiveClientResponse,
+    ClientInfo,
 )
 
 
 manager_router = APIRouter(prefix="/manager", tags=["Client Manager API"])
+
+
+def prepare_clients(manager: BaseManager) -> list[ClientInfo]:
+    return [
+        ClientInfo(
+            id=client._identifier,
+            name=str(client),
+            description=client.description,
+        )
+        for client in manager.get_available_clients()
+    ]
 
 
 @manager_router.get("/list")
@@ -28,7 +41,7 @@ async def get_managers() -> ManagersListResponse:
                 id=manager_id,
                 name=str(manager),
                 enabled=manager.has_active_client,
-                clients=manager.get_available_clients()
+                clients=prepare_clients(manager)
             )
         )
 
@@ -45,8 +58,9 @@ async def get_manager(manager_id: str) -> ManagerInfo:
         return ManagerInfo(
             id=manager_id,
             name=str(manager),
+            description=manager.description,
             enabled=manager.has_active_client,
-            clients=manager.get_available_clients()
+            clients=prepare_clients(manager)
         )
     except KeyError:
         raise HTTPException(status_code=404, detail="Manager not found")

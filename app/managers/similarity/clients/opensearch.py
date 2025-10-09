@@ -4,6 +4,7 @@ from opensearchpy import AsyncOpenSearch
 from app.managers.similarity.clients.base import BaseSearchClientMethods
 from app.models.pipeline import TriggeredRuleData
 from app.modules.logger import bastion_logger
+from app.core.enums import SimilarityClientNames
 from settings import get_settings
 
 
@@ -16,7 +17,8 @@ class AsyncOpenSearchClient(BaseSearchClientMethods):
     and error handling with detailed logging.
     """
 
-    _identifier: str = "opensearch"
+    _identifier: SimilarityClientNames = SimilarityClientNames.opensearch
+    description = "OpenSearch-based client for similarity search operations using vector embeddings in database."
 
     def __init__(self) -> None:
         """

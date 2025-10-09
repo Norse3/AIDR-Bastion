@@ -1,9 +1,11 @@
 from typing import Any, Dict, List
+
 from elasticsearch import AsyncElasticsearch
 
 from app.managers.similarity.clients.base import BaseSearchClientMethods
 from app.models.pipeline import TriggeredRuleData
 from app.modules.logger import bastion_logger
+from app.core.enums import SimilarityClientNames
 from settings import get_settings
 
 
@@ -16,7 +18,8 @@ class AsyncElasticsearchClient(BaseSearchClientMethods):
     and error handling with detailed logging.
     """
 
-    _identifier: str = "elasticsearch"
+    _identifier: SimilarityClientNames = SimilarityClientNames.elasticsearch
+    description = "Elasticsearch-based client for similarity search operations using vector embeddings in database."
 
     def __init__(self) -> None:
         """
@@ -38,7 +41,8 @@ class AsyncElasticsearchClient(BaseSearchClientMethods):
         Returns:
             AsyncElasticsearch: Initialized Elasticsearch client
         """
-        return AsyncElasticsearch(**self._search_settings.get_client_config())
+        config = self._search_settings.get_client_config()
+        return AsyncElasticsearch(**config)
 
     async def search_similar_documents(self, vector: List[float]) -> List[Dict[str, Any]]:
         """

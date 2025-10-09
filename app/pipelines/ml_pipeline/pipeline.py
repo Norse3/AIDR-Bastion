@@ -19,12 +19,13 @@ class MLPipeline(BasePipeline):
     representations of text (embeddings) for classification.
 
     Attributes:
-        name (PipelineNames): Pipeline name (ml)
+        _identifier (PipelineNames): Pipeline identifier (ml)
         model_classifier: Loaded machine learning model
         enabled (bool): Whether pipeline is active (depends on successful model loading)
     """
 
-    name = PipelineNames.ml
+    _identifier = PipelineNames.ml
+    description = "Machine learning-based pipeline for detecting malicious prompts."
 
     def __init__(self):
         """
@@ -95,10 +96,10 @@ class MLPipeline(BasePipeline):
             PipelineResult: Analysis result with list of triggered rules
         """
         trigger_rules = []
-        bastion_logger.info(f"Analyzing for {self.name}")
+        bastion_logger.info(f"Analyzing for {self._identifier}")
         if self.validate_prompt(prompt):
             msg = "ML Pipeline detected malicious prompt"
-            trigger_rules.append(TriggeredRuleData(id=self.name, name=self.name, details=msg, action=RuleAction.BLOCK))
-            bastion_logger.info(f"Analyzing for {self.name}, status: {ActionStatus.BLOCK}, details: {msg}")
-        bastion_logger.info(f"Analyzing done for {self.name}")
+            trigger_rules.append(TriggeredRuleData(id=self._identifier, name=str(self), details=msg, action=RuleAction.BLOCK))
+            bastion_logger.info(f"Analyzing for {self._identifier}, status: {ActionStatus.BLOCK}, details: {msg}")
+        bastion_logger.info(f"Analyzing done for {self._identifier}")
         return PipelineResult(name=str(self), triggered_rules=trigger_rules)

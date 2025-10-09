@@ -1,4 +1,4 @@
-from app.core.enums import ActionStatus
+from app.core.enums import ActionStatus, ManagerNames
 from app.core.manager import BaseManager
 from app.managers.llm.clients import ALL_CLIENTS_MAP
 from app.managers.llm.clients.base import BaseLLMClient
@@ -23,7 +23,8 @@ class LLMManager(BaseManager[BaseLLMClient]):
         _active_client (Optional[BaseSearchClient]): Currently active client for operations
         _active_client_id (str): Identifier of the active client
     """
-    _identifier: str = "llm"
+    _identifier: ManagerNames = ManagerNames.llm
+    description = "Manager class for LLM operations using AI language models."
 
     def __init__(self) -> None:
         """

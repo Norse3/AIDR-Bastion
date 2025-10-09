@@ -4,6 +4,7 @@ from app.managers.similarity.clients import ALL_CLIENTS_MAP
 from app.managers.similarity.clients.base import BaseSearchClient
 from app.models.pipeline import PipelineResult
 from app.modules.logger import bastion_logger
+from app.core.enums import ManagerNames
 from settings import get_settings
 
 settings = get_settings()
@@ -24,7 +25,8 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
         _active_client_id (str): Identifier of the active client
     """
 
-    _identifier: str = "similarity"
+    _identifier: ManagerNames = ManagerNames.similarity
+    description = "Manager class for similarity search operations using vector embeddings in database."
 
     def __init__(self) -> None:
         """
@@ -49,9 +51,10 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
         """
         import asyncio
         bastion_logger.debug("Checking connections for all initialized clients")
+        loop = asyncio.get_event_loop()
         for client in self._clients_map.values():
             try:
-                asyncio.create_task(client.check_connection())
+                loop.create_task(client.check_connection())
             except Exception as e:
                 bastion_logger.error(f"Failed to check connection for {client}: {e}")
         bastion_logger.debug("Connection checks deferred until first async operation")

@@ -281,7 +281,7 @@ from app.manager import pipeline_manager
 result = await pipeline_manager.run_pipeline("Your prompt", "default")
 print(f"Status: {result.status}")
 for pipeline in result.pipelines:
-    print(f"Pipeline: {pipeline.name}, Status: {pipeline.status}")
+    print(f"Pipeline: {pipeline._identifier}, Status: {pipeline.status}")
 ```
 
 ### Integration with Existing Applications
@@ -787,7 +787,7 @@ class MyCustomPipeline(BasePipeline):
 
         status = ActionStatus.BLOCK if triggered_rules else ActionStatus.ALLOW
         return PipelineResult(
-            name=self.name,
+            name=self._identifier,
             status=status,
             triggered_rules=triggered_rules
         )
@@ -805,7 +805,7 @@ __PIPELINES__ = [
 ]
 
 PIPELINES_MAP = {
-    pipeline.name: pipeline for pipeline in __PIPELINES__
+    pipeline._identifier: pipeline for pipeline in __PIPELINES__
     if pipeline.enabled
 }
 ```

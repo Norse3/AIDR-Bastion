@@ -2,7 +2,7 @@ import json
 
 from openai import AsyncOpenAI
 
-from app.core.enums import ActionStatus
+from app.core.enums import ActionStatus, LLMClientNames
 from app.core.exceptions import ConfigurationException
 from app.managers.llm.clients.base import BaseLLMClient
 from app.models.pipeline import PipelineResult, TriggeredRuleData
@@ -22,13 +22,14 @@ class AsyncOpenAIClient(BaseLLMClient):
 
     Attributes:
         _client (AsyncOpenAI): OpenAI API client
-        _identifier (str): OpenAI identifier (openai)
+        _identifier (LLMClientNames): OpenAI identifier (openai)
         model (str): OpenAI model to use for analysis
         SYSTEM_PROMPT (str): System prompt for AI analysis
     """
 
     _client: AsyncOpenAI
-    _identifier = "openai"
+    _identifier: LLMClientNames = LLMClientNames.openai
+    description = "OpenAI-based client for LLM operations using AI language models."
 
     SYSTEM_PROMPT = """
 You are an AI prompt safety analyzer. Your task is to evaluate the given user text for potential risks, malicious intent, or policy violations.  
@@ -187,12 +188,12 @@ Return only a JSON object in the following format:
         if analysis.get("status") in ("block", "notify"):
             triggered_rules.append(
                 TriggeredRuleData(
-                    id=self.name,
-                    name=self.name,
+                    id=self._identifier,
+                    name=str(self),
                     details=analysis.get("reason"),
                     action=ActionStatus(analysis.get("status")),
                 )
             )
         status = ActionStatus(analysis.get("status"))
-        bastion_logger.info(f"Analyzing for {self.name}, status: {status}")
+        bastion_logger.info(f"Analyzing for {self._identifier}, status: {status}")
         return PipelineResult(name=str(self), triggered_rules=triggered_rules, status=status)

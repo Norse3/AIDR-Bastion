@@ -18,11 +18,12 @@ class RulePipeline(BaseRulesPipeline):
     case-insensitive matching and dot-all mode for comprehensive pattern detection.
 
     Attributes:
-        name (PipelineNames): Pipeline name (regex)
+        _identifier (PipelineNames): Pipeline identifier (regex)
         _rules (list): List of loaded regex rules for analysis
     """
 
-    name = PipelineNames.rule
+    _identifier = PipelineNames.rule
+    description = "Regular expression-based pipeline for pattern matching in prompts."
     _rules_dir_path = str(Path(__file__).parent / "rules")
 
     def _validate_rule_dict(self, rule_dict: dict, file_path: str) -> None:

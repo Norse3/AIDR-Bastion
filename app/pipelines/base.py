@@ -19,11 +19,11 @@ class BasePipeline(ABC):
     logic and string representation methods.
 
     Attributes:
-        name (str): Pipeline name identifier
+        _identifier (str): Pipeline identifier
         enabled (bool): Whether the pipeline is currently enabled
     """
 
-    name: str
+    _identifier: str
     enabled: bool = False
 
     def __str__(self) -> str:

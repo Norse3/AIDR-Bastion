@@ -13,5 +13,13 @@ __PIPELINES__ = [
 ]
 
 
-ENABLED_PIPELINES_MAP = {pipeline.name: pipeline for pipeline in __PIPELINES__ if pipeline.enabled}
-PIPELINES_MAP = {pipeline.name: pipeline for pipeline in __PIPELINES__}
+ENABLED_PIPELINES_MAP = {
+    pipeline._identifier: pipeline
+    for pipeline in __PIPELINES__ 
+    if pipeline.enabled
+}
+
+PIPELINES_MAP = {
+    pipeline._identifier: pipeline
+    for pipeline in __PIPELINES__
+}

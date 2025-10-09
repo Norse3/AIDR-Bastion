@@ -1,11 +1,17 @@
 from pydantic import BaseModel
 
 
+class ClientInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+
+
 class ManagerInfo(BaseModel):
     id: str
     name: str
     enabled: bool
-    clients: list[str]
+    clients: list[ClientInfo]
 
 
 class ManagersListResponse(BaseModel):

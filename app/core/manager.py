@@ -71,11 +71,11 @@ class BaseManager(ABC, Generic[T]):
             try:
                 client = client_class()
                 self._clients_map[client_id] = client
-                bastion_logger.info(f"{client} client initialized successfully")
+                bastion_logger.info(f"[{client}] initialized successfully")
             except ConfigurationException as e:
-                bastion_logger.error(f"There are no configuration for {client_class}: {e}")
+                bastion_logger.error(f"[{client_class._identifier}] There are no configuration. Error: {e}")
             except Exception as e:
-                bastion_logger.error(f"Failed to initialize {client_class}: {e}")
+                bastion_logger.error(f"[{client_class._identifier}] Failed to initialize. Error: {e}")
 
     def _set_active_client(self, client_id: str = None) -> None:
         """
@@ -90,7 +90,7 @@ class BaseManager(ABC, Generic[T]):
         if client := self._clients_map.get(client_id):
             self._active_client = client
             self._active_client_id = client_id
-            bastion_logger.info(f"Switched active client to {client_id}")
+            bastion_logger.info(f"[{self}][{client}] Set as active client")
         elif not self._active_client and self._clients_map:
             self._active_client = next(iter(self._clients_map.values()))
             self._active_client_id = getattr(self._active_client, "identifier", None)
@@ -118,14 +118,14 @@ class BaseManager(ABC, Generic[T]):
         """
         pass
 
-    def get_available_clients(self) -> List[str]:
+    def get_available_clients(self) -> List[T]:
         """
         Returns list of available client identifiers.
 
         Returns:
             List[str]: List of available client identifiers
         """
-        return list(self._clients_map.keys())
+        return list(self._clients_map.values())
 
     def switch_active_client(self, client_id: str) -> bool:
         """

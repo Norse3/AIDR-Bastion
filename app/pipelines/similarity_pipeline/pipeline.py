@@ -18,11 +18,12 @@ class SimilarityPipeline(BasePipeline):
     Results are deduplicated and scored based on similarity thresholds.
 
     Attributes:
-        name (PipelineNames): Pipeline name (similarity)
+        _identifier (PipelineNames): Pipeline identifier (similarity)
         enabled (bool): Whether pipeline is active (depends on OpenSearch settings)
     """
 
-    name = PipelineNames.similarity
+    _identifier = PipelineNames.similarity
+    description = "Similarity-based pipeline for detecting similar content using vector embeddings."
 
     def __init__(self):
         super().__init__()

@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, strEnum
 
 
 class PipelineNames(str, Enum):
@@ -43,3 +43,25 @@ class Language(str, Enum):
 class RuleAction(str, Enum):
     NOTIFY = "notify"
     BLOCK = "block"
+
+
+class SimilarityClientNames(strEnum):
+    opensearch = "opensearch"
+    elasticsearch = "elasticsearch"
+
+
+class LLMClientNames(strEnum):
+    openai = "openai"
+    deepseek = "deepseek"
+    anthropic = "anthropic"
+    google = "google"
+    azure = "azure"
+    ollama = "ollama"
+    groq = "groq"
+    mistral = "mistral"
+    gemini = "gemini"
+
+
+class ManagerNames(strEnum):
+    similarity = "similarity"
+    llm = "llm"

@@ -21,12 +21,13 @@ class CodeAnalysisPipeline(BasePipeline):
     patterns defined in Semgrep rules.
 
     Attributes:
-        name (PipelineNames): Pipeline name (code)
+        _identifier (PipelineNames): Pipeline identifier (code)
         enabled (bool): Always enabled pipeline
         _languages_data_map (dict): Mapping of languages to Semgrep configurations
     """
 
-    name = PipelineNames.code_analysis
+    _identifier = PipelineNames.code_analysis
+    description = "Semgrep-based pipeline for static code analysis of programming languages."
     enabled = True
 
     _languages_data_map: dict[Language, SemgrepLangConfig] = {

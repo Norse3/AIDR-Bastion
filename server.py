@@ -41,6 +41,5 @@ app.add_middleware(
 
 
 if __name__ == "__main__":
-    bastion_logger.info("Server is running: %s:%s", settings.HOST, settings.PORT)
+    bastion_logger.info(f"[{settings.PROJECT_NAME}] Server is running: {settings.HOST}:{settings.PORT}")
     uvicorn.run(app, host=settings.HOST, port=settings.PORT, log_level="warning")
-    
