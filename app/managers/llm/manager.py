@@ -1,3 +1,4 @@
+from app.core.enums import ActionStatus
 from app.core.manager import BaseManager
 from app.managers.llm.clients import ALL_CLIENTS_MAP
 from app.managers.llm.clients.base import BaseLLMClient
@@ -35,28 +36,40 @@ class LLMManager(BaseManager[BaseLLMClient]):
         """
         super().__init__(ALL_CLIENTS_MAP, "LLM_DEFAULT_CLIENT")
 
-    async def run(self, prompt: str) -> PipelineResult | None:
+    async def run(self, text: str) -> PipelineResult:
         """
         Validates input text using the active client.
 
         Delegates the validation of input text to the currently active client.
-        Returns None if no client is available.
+        Returns PipelineResult with ERROR status if no client is available.
 
         Args:
-            prompt (str): Text prompt to analyze
+            text (str): Text prompt to analyze
 
         Returns:
-            PipelineResult | None: Result of text validation or None if no client available
+            PipelineResult: Result of text validation or ERROR status if no client available
         """
         if not self._active_client:
-            bastion_logger.warning("No active LLM client available for text validation")
-            return None
+            msg = "No active LLM client available for text validation"
+            bastion_logger.warning(msg)
+            return PipelineResult(
+                name=str(self),
+                triggered_rules=[],
+                status=ActionStatus.ERROR,
+                details=msg,
+            )
 
         try:
-            return await self._active_client.validate_input_text(prompt=prompt)
+            return await self._active_client.run(text=text)
         except Exception as e:
-            bastion_logger.error(f"Error during validation of input text with {self._active_client_id}: {e}")
-            return None
+            msg = f"Error during validation of input text with {self._active_client_id}: {e}"
+            bastion_logger.error(msg)
+            return PipelineResult(
+                name=str(self),
+                triggered_rules=[],
+                status=ActionStatus.ERROR,
+                details=msg,
+            )
 
 
 llm_manager = LLMManager()

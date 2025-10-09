@@ -9,7 +9,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.modules.logger import bastion_logger
 
 
-class OpenSearchSettings(BaseModel):
+class BaseSearchSettings(BaseModel):
+    """
+    Base class for search system settings.
+
+    Provides common configuration structure for Elasticsearch and OpenSearch clients.
+    """
+
     user: str
     password: str
     host: str
@@ -17,14 +23,41 @@ class OpenSearchSettings(BaseModel):
     scheme: str = "https"
     pool_size: int = 10
 
+    def get_common_config(self) -> dict:
+        """
+        Returns common configuration parameters for all search clients.
 
-class ElasticsearchSettings(BaseModel):
-    user: str
-    password: str
-    host: str
-    port: int
-    scheme: str = "https"
-    pool_size: int = 10
+        Returns:
+            dict: Common configuration dictionary
+        """
+        return {
+            "hosts": [{"host": self.host, "port": self.port}],
+            "scheme": self.scheme,
+            "http_auth": (self.user, self.password),
+            "use_ssl": True,
+            "verify_certs": False,
+            "ssl_show_warn": False,
+            "retry_on_status": (500, 502, 503, 504),
+            "retry_on_timeout": True,
+            "timeout": 30,
+            "max_retries": 3,
+        }
+
+
+class OpenSearchSettings(BaseSearchSettings):
+    def get_client_config(self) -> dict:
+        return {
+            **self.get_common_config(),
+            "pool_maxsize": self.pool_size,
+        }
+
+
+class ElasticsearchSettings(BaseSearchSettings):
+    def get_client_config(self) -> dict:
+        return {
+            **self.get_common_config(),
+            "maxsize": self.pool_size,
+        }
 
 
 class KafkaSettings(BaseModel):

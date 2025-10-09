@@ -103,7 +103,7 @@ Return only a JSON object in the following format:
         except Exception as err:
             bastion_logger.error(f"Error loading response, error={str(err)}")
 
-    async def validate_input_text(self, prompt: str) -> PipelineResult | None:
+    async def run(self, text: str) -> PipelineResult:
         """
         Performs AI-powered analysis of the prompt using OpenAI.
 
@@ -112,26 +112,27 @@ Return only a JSON object in the following format:
         for notification.
 
         Args:
-            prompt (str): Text prompt to analyze
+            text (str): Text prompt to analyze
 
         Returns:
-            PipelineResult: Analysis result with triggered rules or None on error
+            PipelineResult: Analysis result with triggered rules or ERROR status on error
         """
-        messages = self._prepare_messages(prompt)
+        messages = self._prepare_messages(text)
         try:
             response = await self.client.chat.completions.create(
                 model=self.model, messages=messages, temperature=0.1, max_tokens=1000
             )
             analysis = response.choices[0].message.content
             bastion_logger.info(f"Analysis: {analysis}")
-            return self._process_response(analysis, prompt)
+            return self._process_response(analysis, text)
         except Exception as err:
-            bastion_logger.error(f"Error analyzing prompt, error={str(err)}")
+            msg = f"Error analyzing prompt, error={str(err)}"
+            bastion_logger.error(msg)
             error_data = {
                 "status": ActionStatus.ERROR,
-                "reason": str(err),
+                "reason": msg,
             }
-            return self._process_response(error_data, prompt)
+            return self._process_response(error_data, text)
 
     def _prepare_messages(self, text: str) -> list[dict]:
         """

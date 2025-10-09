@@ -1,8 +1,9 @@
-from typing import Dict, List
+from app.core.enums import ActionStatus
 
 from app.core.manager import BaseManager
 from app.managers.similarity.clients import ALL_CLIENTS_MAP
 from app.managers.similarity.clients.base import BaseSearchClient
+from app.models.pipeline import PipelineResult
 from app.modules.logger import bastion_logger
 from settings import get_settings
 
@@ -49,7 +50,7 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
             except Exception as e:
                 bastion_logger.error(f"Failed to check connection for {client}: {e}")
 
-    async def run(self, vector: List[float]) -> List[Dict[str, any]]:
+    async def run(self, text: str) -> PipelineResult:
         """
         Searches for similar documents using the active client.
 
@@ -57,20 +58,32 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
         Returns an empty list if no client is available.
 
         Args:
-            vector (List[float]): Vector for searching similar documents
+            text (str): Text prompt to analyze for similar content
 
         Returns:
-            List[Dict[str, any]]: List of similar documents found by the active client
+            PipelineResult: Analysis result with triggered rules and status
         """
         if not self._active_client:
-            bastion_logger.warning("No active search client available for similarity search")
-            return []
+            msg = "No active search client available for similarity search"
+            bastion_logger.warning(msg)
+            return PipelineResult(
+                name=str(self),
+                triggered_rules=[],
+                status=ActionStatus.ERROR,
+                details=msg,
+            )
 
         try:
-            return await self._active_client.search_similar_documents(vector)
+            return await self._active_client.run(text=text)
         except Exception as e:
-            bastion_logger.error(f"Error during similarity search with {self._active_client_id}: {e}")
-            return []
+            msg = f"Error during similarity search with {self._active_client_id}: {e}"
+            bastion_logger.error(msg)
+            return PipelineResult(
+                name=str(self),
+                triggered_rules=[],
+                status=ActionStatus.ERROR,
+                details=msg,
+            )
 
     async def close_connections(self) -> None:
         """

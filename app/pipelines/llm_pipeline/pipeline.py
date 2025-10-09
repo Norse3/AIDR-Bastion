@@ -42,7 +42,7 @@ class LLMPipeline(BasePipeline):
     def __str__(self) -> str:
         return "LLM Pipeline"
 
-    async def run(self, prompt: str) -> PipelineResult | None:
+    async def run(self, prompt: str) -> PipelineResult:
         """
         Performs AI-powered analysis of the prompt using OpenAI.
 
