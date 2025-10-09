@@ -6,8 +6,11 @@ from app.core.exceptions import ConfigurationException
 from app.core.enums import RuleAction
 from app.models.pipeline import PipelineResult, TriggeredRuleData
 from app.modules.logger import bastion_logger
-from app.pipelines.similarity_pipeline.utils import split_text_into_sentences
-from app.utils import text_embedding
+from app.utils import text_embedding, split_text_into_sentences
+from settings import get_settings
+
+
+settings = get_settings()
 
 
 class BaseSearchClient(ABC):
@@ -20,12 +23,12 @@ class BaseSearchClient(ABC):
 
     Attributes:
         similarity_prompt_index (str): Index name for searching similar prompts
-        _settings (BaseSearchSettings): Search system connection settings
+        _search_settings (BaseSearchSettings): Search system connection settings
     """
 
     _identifier: str | None = None
 
-    def __init__(self, similarity_prompt_index: str, settings: Any) -> None:
+    def __init__(self, similarity_prompt_index: str, search_settings: Any) -> None:
         """
         Initializes search system client.
 
@@ -34,9 +37,9 @@ class BaseSearchClient(ABC):
             settings (BaseSearchSettings): Search system connection settings
         """
         self.similarity_prompt_index = similarity_prompt_index
-        self._settings = settings
-        self.notify_threshold = self._settings.SIMILARITY_NOTIFY_THRESHOLD
-        self.block_threshold = self._settings.SIMILARITY_BLOCK_THRESHOLD
+        self._search_settings = search_settings
+        self.notify_threshold = settings.SIMILARITY_NOTIFY_THRESHOLD
+        self.block_threshold = settings.SIMILARITY_BLOCK_THRESHOLD
         self._client = self._initialize_client()
 
     def __str__(self) -> str:
@@ -87,7 +90,7 @@ class BaseSearchClient(ABC):
         Raises:
             Exception: On failed connection or search system error
         """
-        if not self._settings:
+        if not self._search_settings:
             return
         try:
             is_connected = await self._ping()
@@ -114,7 +117,7 @@ class BaseSearchClient(ABC):
                 self._client = None
         except Exception as e:
             error_msg = f"Failed to close pool of connections to {self}. Error: {e}"
-            bastion_logger.exception(f"[{self._settings.host}] {error_msg}")
+            bastion_logger.exception(f"[{self._search_settings.host}] {error_msg}")
 
     async def _search(self, index: str, body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -138,13 +141,13 @@ class BaseSearchClient(ABC):
         except Exception as e:
             if "ConnectionError" in str(type(e)):
                 error_msg = f"Failed to establish connection with {self}. Error: {e}"
-                bastion_logger.error(f"[{self._settings.host}][{index}] {error_msg}")
+                bastion_logger.error(f"[{self._search_settings.host}][{index}] {error_msg}")
             elif "RequestError" in str(type(e)):
                 error_msg = f"{self} Response Error: Bad Request. Error: {e}"
-                bastion_logger.exception(f"[{self._settings.host}] {error_msg}")
+                bastion_logger.exception(f"[{self._search_settings.host}] {error_msg}")
             else:
                 error_msg = f"Failed to execute search query. Error: {e}"
-                bastion_logger.exception(f"[{self._settings.host}][{index}] {error_msg}")
+                bastion_logger.exception(f"[{self._search_settings.host}][{index}] {error_msg}")
             return None
 
     async def search_similar_documents(self, vector: List[float]) -> List[Dict[str, Any]]:
@@ -177,7 +180,7 @@ class BaseSearchClient(ABC):
         try:
             return await self._client.indices.exists(index=index)
         except Exception as e:
-            bastion_logger.error(f"[{self._settings.host}][{index}] Failed to check index existence: {e}")
+            bastion_logger.error(f"[{self._search_settings.host}][{index}] Failed to check index existence: {e}")
             return False
 
     async def test_connection(self) -> bool:
@@ -222,7 +225,7 @@ class BaseSearchClient(ABC):
         try:
             return await self._client.ping()
         except Exception as e:
-            bastion_logger.error(f"[{self._settings.host}] Ping failed: {e}")
+            bastion_logger.error(f"[{self._search_settings.host}] Ping failed: {e}")
             return False
 
     async def prepare_triggered_rules(self, similar_documents: list[dict]) -> list[TriggeredRuleData]:

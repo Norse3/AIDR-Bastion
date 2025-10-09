@@ -4,7 +4,7 @@
         "pipelines": [
             "similarity",
             "regex",
-            "openai",
+            "llm",
             "ml",
             "code_analysis"
         ]
@@ -19,7 +19,7 @@
         "pipeline_flow": "model_audit",
         "pipelines": [
             "ml",
-            "openai"
+            "llm"
         ]
     },
     {

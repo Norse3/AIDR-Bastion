@@ -23,6 +23,7 @@ class LLMManager(BaseManager[BaseLLMClient]):
         _active_client (Optional[BaseSearchClient]): Currently active client for operations
         _active_client_id (str): Identifier of the active client
     """
+    _identifier: str = "llm"
 
     def __init__(self) -> None:
         """
@@ -35,6 +36,9 @@ class LLMManager(BaseManager[BaseLLMClient]):
         3. None (if neither available)
         """
         super().__init__(ALL_CLIENTS_MAP, "LLM_DEFAULT_CLIENT")
+
+    def __str__(self) -> str:
+        return "LLM Manager"
 
     async def run(self, text: str) -> PipelineResult:
         """
@@ -70,6 +74,3 @@ class LLMManager(BaseManager[BaseLLMClient]):
                 status=ActionStatus.ERROR,
                 details=msg,
             )
-
-
-llm_manager = LLMManager()

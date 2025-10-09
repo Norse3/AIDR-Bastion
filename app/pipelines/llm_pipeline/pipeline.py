@@ -1,5 +1,5 @@
 from app.core.enums import ActionStatus, PipelineNames
-from app.managers.llm.manager import llm_manager
+from app.managers import ALL_MANAGERS_MAP
 from app.models.pipeline import PipelineResult
 from app.modules.logger import bastion_logger
 from app.pipelines.base import BasePipeline
@@ -33,11 +33,12 @@ class LLMPipeline(BasePipeline):
         Sets up the OpenAI API client with the provided API key and configures
         the model for analysis. Enables the pipeline if API key is available.
         """
-        if llm_manager.has_active_client:
+        self.llm_manager = ALL_MANAGERS_MAP['llm']
+        if self.llm_manager.has_active_client:
             self.enabled = True
-            bastion_logger.info(f"[{self}] loaded successfully. Active client: {llm_manager.active_client}")
+            bastion_logger.info(f"[{self}] loaded successfully. Active client: {str(self.llm_manager._active_client)}")
         else:
-            bastion_logger.warning(f"[{self}] failed to load Active client: {llm_manager.active_client}")
+            bastion_logger.warning(f"[{self}] there are no active client. Check the LLM Manager settings and logs.")
 
     def __str__(self) -> str:
         return "LLM Pipeline"
@@ -57,7 +58,7 @@ class LLMPipeline(BasePipeline):
             PipelineResult: Analysis result with triggered rules or None on error
         """
         try:
-            return await llm_manager.validate_input_text(prompt=prompt)
+            return await self.llm_manager.validate_input_text(prompt=prompt)
         except Exception as err:
             bastion_logger.error(f"Error analyzing prompt, error={str(err)}")
             return PipelineResult(name=str(self), triggered_rules=[], status=ActionStatus.ERROR, details=str(err))

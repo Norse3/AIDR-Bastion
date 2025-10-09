@@ -38,7 +38,7 @@ class AsyncElasticsearchClient(BaseSearchClientMethods):
         Returns:
             AsyncElasticsearch: Initialized Elasticsearch client
         """
-        return AsyncElasticsearch(**self._settings.get_client_config())
+        return AsyncElasticsearch(**self._search_settings.get_client_config())
 
     async def search_similar_documents(self, vector: List[float]) -> List[Dict[str, Any]]:
         """

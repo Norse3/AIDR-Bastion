@@ -1,5 +1,4 @@
 from app.core.enums import ActionStatus
-
 from app.core.manager import BaseManager
 from app.managers.similarity.clients import ALL_CLIENTS_MAP
 from app.managers.similarity.clients.base import BaseSearchClient
@@ -25,6 +24,8 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
         _active_client_id (str): Identifier of the active client
     """
 
+    _identifier: str = "similarity"
+
     def __init__(self) -> None:
         """
         Initializes SimilarityManager with available search clients.
@@ -38,17 +39,22 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
         super().__init__(ALL_CLIENTS_MAP, "SIMILARITY_DEFAULT_CLIENT")
         self._check_connections()
 
+    def __str__(self) -> str:
+        return "Similarity Manager"
+
     def _check_connections(self) -> None:
         """
         Checks connections for all initialized clients.
+        Connection checks are deferred until the first async operation.
         """
         import asyncio
-
+        bastion_logger.debug("Checking connections for all initialized clients")
         for client in self._clients_map.values():
             try:
                 asyncio.create_task(client.check_connection())
             except Exception as e:
                 bastion_logger.error(f"Failed to check connection for {client}: {e}")
+        bastion_logger.debug("Connection checks deferred until first async operation")
 
     async def run(self, text: str) -> PipelineResult:
         """
@@ -74,6 +80,8 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
             )
 
         try:
+            # Check connection before running
+            await self._active_client.check_connection()
             return await self._active_client.run(text=text)
         except Exception as e:
             msg = f"Error during similarity search with {self._active_client_id}: {e}"
@@ -91,6 +99,3 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
         """
         for client in self._clients_map.values():
             await client.close()
-
-
-similarity_manager = SimilarityManager()

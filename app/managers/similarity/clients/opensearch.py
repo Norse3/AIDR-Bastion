@@ -38,7 +38,7 @@ class AsyncOpenSearchClient(BaseSearchClientMethods):
         Returns:
             AsyncOpenSearch: Initialized OpenSearch client
         """
-        return AsyncOpenSearch(**self._settings.get_client_config())
+        return AsyncOpenSearch(**self._search_settings.get_client_config())
 
     async def search_similar_documents(self, vector: List[float]) -> List[Dict[str, Any]]:
         """

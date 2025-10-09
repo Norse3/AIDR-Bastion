@@ -65,6 +65,19 @@ Return only a JSON object in the following format:
     def __str__(self) -> str:
         return "OpenAI Client"
 
+    async def check_connection(self) -> None:
+        """
+        Checks connection to OpenAI API.
+
+        Raises:
+            Exception: On failed connection or API error
+        """
+        try:
+            # Simple test request to check API connectivity
+            await self.client.models.list()
+        except Exception as e:
+            raise Exception(f"Failed to connect to OpenAI API: {e}")
+
     def __load_client(self) -> None:
         """
         Loads the OpenAI client.

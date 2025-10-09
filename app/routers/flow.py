@@ -9,19 +9,19 @@ from app.models.pipeline import (
     TaskResult,
 )
 
-pipeline_router = APIRouter(prefix="/api/v1", tags=["pipeline"])
+flow_router = APIRouter(prefix="/flow", tags=["Flow API"])
 
 
-@pipeline_router.post("/run_pipeline")
-async def run_pipeline(request: TaskRequest) -> TaskResult:
+@flow_router.post("/run")
+async def run_flow(request: TaskRequest) -> TaskResult:
     task_result = await pipeline_manager.run_pipeline(
         prompt=request.prompt, pipeline_flow=request.pipeline_flow, task_id=request.task_id
     )
     return task_result
 
 
-@pipeline_router.get("/flows")
-async def get_flows() -> FlowsResponse:
+@flow_router.get("/list")
+async def get_flows_list() -> FlowsResponse:
     """
     Get list of all available flows and their pipelines.
 

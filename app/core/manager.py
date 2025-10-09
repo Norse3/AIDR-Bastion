@@ -24,6 +24,7 @@ class BaseManager(ABC, Generic[T]):
         _active_client (Optional[T]): Currently active client for operations
         _active_client_id (Optional[str]): Identifier of the active client
     """
+    _identifier: str = "base"
 
     def __init__(self, clients_map: Dict[str, type], default_client_setting: str) -> None:
         """
@@ -40,6 +41,24 @@ class BaseManager(ABC, Generic[T]):
 
         self._initialize_clients(clients_map)
         self._set_active_client()
+
+    def __str__(self) -> str:
+        """
+        String representation of the client.
+
+        Returns:
+            str: Class name of the client
+        """
+        return self.__class__.__name__
+
+    def __repr__(self) -> str:
+        """
+        String representation of the client.
+
+        Returns:
+            str: Class name of the client
+        """
+        return self.__str__()
 
     def _initialize_clients(self, clients_map: Dict[str, type]) -> None:
         """

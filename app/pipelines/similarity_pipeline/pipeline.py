@@ -1,5 +1,5 @@
 from app.core.enums import ActionStatus, PipelineNames
-from app.managers.similarity.manager import similarity_manager
+from app.managers import ALL_MANAGERS_MAP
 from app.models.pipeline import PipelineResult
 from app.modules.logger import bastion_logger
 from app.pipelines.base import BasePipeline
@@ -26,13 +26,14 @@ class SimilarityPipeline(BasePipeline):
 
     def __init__(self):
         super().__init__()
-        if similarity_manager.has_active_client:
+        self.similarity_manager = ALL_MANAGERS_MAP['similarity']
+        if self.similarity_manager.has_active_client:
             self.enabled = True
-            bastion_logger.info(f"[{self}] loaded successfully. Active client: {similarity_manager.active_client}")
+            bastion_logger.info(f"[{self}] loaded successfully. Active client: {str(self.similarity_manager._active_client)}")
         else:
-            bastion_logger.warning(f"[{self}] failed to load Active client: {similarity_manager.active_client}")
+            bastion_logger.warning(f"[{self}] there are no active client. Check the Similarity Manager settings and logs.")
 
-    async def run(self, prompt: str) -> PipelineResult:
+    async def run(self, prompt: str, **kwargs) -> PipelineResult:
         """
         Performs AI-powered analysis of the prompt using OpenAI.
 
@@ -44,10 +45,11 @@ class SimilarityPipeline(BasePipeline):
             prompt (str): Text prompt to analyze
 
         Returns:
-            PipelineResult: Analysis result with triggered rules or None on error
+            PipelineResult: Analysis result with triggered rules or ERROR status on error
         """
         try:
-            return await similarity_manager.run(prompt=prompt)
+            return await self.similarity_manager.run(text=prompt)
         except Exception as err:
-            bastion_logger.error(f"Error analyzing prompt, error={str(err)}")
-            return PipelineResult(name=str(self), triggered_rules=[], status=ActionStatus.ERROR, details=str(err))
+            msg = f"Error analyzing prompt, error={str(err)}"
+            bastion_logger.error(msg)
+            return PipelineResult(name=str(self), triggered_rules=[], status=ActionStatus.ERROR, details=msg)
