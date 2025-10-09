@@ -7,11 +7,14 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.modules.logger import pipeline_logger  # noqa: E402
+from app.modules.logger import bastion_logger  # noqa: E402
 from app.modules.opensearch import os_client  # noqa: E402
-from app.pipelines.similarity_pipeline.const import INDEX_MAPPING, PROMPTS_EXAMPLES  # noqa: E402
-from settings import get_settings  # noqa: E402
+from app.pipelines.similarity_pipeline.const import (  # noqa: E402
+    INDEX_MAPPING,
+    PROMPTS_EXAMPLES,
+)
 from app.utils import text_embedding  # noqa: E402
+from settings import get_settings  # noqa: E402
 
 settings = get_settings()
 
@@ -26,16 +29,16 @@ async def create_index():
     try:
 
         if await os_client.client.indices.exists(index=os_client.similarity_prompt_index):
-            pipeline_logger.info(f"Index {os_client.similarity_prompt_index} already exists")
+            bastion_logger.info(f"Index {os_client.similarity_prompt_index} already exists")
             return True
 
         await os_client.client.indices.create(index=os_client.similarity_prompt_index, body=INDEX_MAPPING)
 
-        pipeline_logger.info(f"Index {os_client.similarity_prompt_index} created successfully")
+        bastion_logger.info(f"Index {os_client.similarity_prompt_index} created successfully")
         return True
 
     except Exception as e:
-        pipeline_logger.error(f"Error creating index: {e}")
+        bastion_logger.error(f"Error creating index: {e}")
         return False
 
 
@@ -49,7 +52,7 @@ async def upload_prompts_examples():
     try:
 
         if not await os_client.client.indices.exists(index=os_client.similarity_prompt_index):
-            pipeline_logger.info("Index does not exist, creating it first...")
+            bastion_logger.info("Index does not exist, creating it first...")
             await os_client.close()
             if not await create_index():
                 return False
@@ -59,11 +62,11 @@ async def upload_prompts_examples():
             doc["vector"] = text_embedding(doc["text"])
             await os_client.client.index(os_client.similarity_prompt_index, body=doc)
 
-        pipeline_logger.info(f"Uploaded {len(docs)} example prompts to index")
+        bastion_logger.info(f"Uploaded {len(docs)} example prompts to index")
         return True
 
     except Exception as e:
-        pipeline_logger.error(f"Error uploading prompts: {e}")
+        bastion_logger.error(f"Error uploading prompts: {e}")
         return False
 
 
@@ -79,7 +82,7 @@ async def check_index_exists() -> bool:
             return False
         return True
     except Exception as e:
-        pipeline_logger.error(f"Error checking index: {e}")
+        bastion_logger.error(f"Error checking index: {e}")
         return False
 
 
@@ -87,23 +90,23 @@ async def main():
     """
     Main function to create index and upload example prompts.
     """
-    pipeline_logger.info("Starting index creation and data upload...")
+    bastion_logger.info("Starting index creation and data upload...")
 
     try:
         status = await check_index_exists()
-        pipeline_logger.info(f"Current index exist: {'yes' if status else 'no'}")
+        bastion_logger.info(f"Current index exist: {'yes' if status else 'no'}")
 
         if not status:
             if await create_index():
-                pipeline_logger.info("Index creation completed successfully")
+                bastion_logger.info("Index creation completed successfully")
             else:
-                pipeline_logger.error("Failed to create index")
+                bastion_logger.error("Failed to create index")
                 return
 
         if await upload_prompts_examples():
-            pipeline_logger.info("Data upload completed successfully")
+            bastion_logger.info("Data upload completed successfully")
         else:
-            pipeline_logger.error("Failed to upload data")
+            bastion_logger.error("Failed to upload data")
     finally:
         await os_client.close()
 

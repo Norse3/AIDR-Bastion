@@ -2,11 +2,10 @@ from enum import Enum
 
 
 class PipelineNames(str, Enum):
-    openai = "openai"
+    llm = "llm"
     ml = "ml"
     code_analysis = "code_analysis"
-    personal_info = "personal_info"
-    regex = "regex"
+    rule = "rule"
     similarity = "similarity"
 
 

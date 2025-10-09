@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 from confluent_kafka import Producer
 from confluent_kafka.error import KafkaError
 
-from app.modules.logger import pipeline_logger
+from app.modules.logger import bastion_logger
 from settings import KafkaSettings, get_settings
 
 
@@ -73,10 +73,10 @@ class KafkaClient:
                     config["sasl.password"] = self._kafka_settings.sasl_password
 
             self._producer = Producer(config)
-            pipeline_logger.info(f"Successfully connected to Kafka at {self._kafka_settings.bootstrap_servers}")
+            bastion_logger.info(f"Successfully connected to Kafka at {self._kafka_settings.bootstrap_servers}")
 
         except Exception as e:
-            pipeline_logger.error(f"Failed to connect to Kafka: {e}")
+            bastion_logger.error(f"Failed to connect to Kafka: {e}")
 
     def disconnect(self) -> None:
         """
@@ -87,9 +87,9 @@ class KafkaClient:
         if self._producer:
             try:
                 self._producer.close()
-                pipeline_logger.info("Kafka connection closed")
+                bastion_logger.info("Kafka connection closed")
             except Exception as e:
-                pipeline_logger.error(f"Error closing Kafka connection: {e}")
+                bastion_logger.error(f"Error closing Kafka connection: {e}")
             finally:
                 self._producer = None
 
@@ -105,7 +105,7 @@ class KafkaClient:
             bool: True if message sent successfully, False otherwise
         """
         if not self.producer:
-            pipeline_logger.error("Kafka producer is not initialized")
+            bastion_logger.error("Kafka producer is not initialized")
             return False
 
         try:
@@ -121,14 +121,14 @@ class KafkaClient:
             # Flush to ensure message is sent
             self._producer.flush(timeout=10)
 
-            pipeline_logger.info(f"Message sent to topic '{self.topic}'")
+            bastion_logger.info(f"Message sent to topic '{self.topic}'")
             return True
 
         except KafkaError as e:
-            pipeline_logger.error(f"Kafka error while sending message: {e}")
+            bastion_logger.error(f"Kafka error while sending message: {e}")
             return False
         except Exception as e:
-            pipeline_logger.error(f"Unexpected error while sending message: {e}")
+            bastion_logger.error(f"Unexpected error while sending message: {e}")
             return False
 
     def _delivery_callback(self, err, msg):
@@ -140,9 +140,9 @@ class KafkaClient:
             msg: Message metadata
         """
         if err is not None:
-            pipeline_logger.error(f"Message delivery failed: {err}")
+            bastion_logger.error(f"Message delivery failed: {err}")
         else:
-            pipeline_logger.info(
+            bastion_logger.info(
                 f"Message delivered to topic '{msg.topic()}' " f"partition {msg.partition()} " f"offset {msg.offset()}"
             )
 

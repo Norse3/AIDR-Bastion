@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from sentence_transformers import SentenceTransformer
 
-from app.modules.logger import pipeline_logger
+from app.modules.logger import bastion_logger
 from settings import get_settings
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ if settings.EMBEDDINGS_MODEL:
     try:
         model = SentenceTransformer(settings.EMBEDDINGS_MODEL, trust_remote_code=True, revision="main")
     except Exception as e:
-        pipeline_logger.error(f"Failed to load embeddings model: {e}")
+        bastion_logger.error(f"Failed to load embeddings model: {e}")
         model = None
 
 
@@ -52,7 +52,7 @@ def get_pipelines_from_config(configs: list[dict]) -> dict[str, list["BasePipeli
             result[flow_name] = pipelines
     result["default"] = list(ENABLED_PIPELINES_MAP.values())
     if skipped_pipelines:
-        pipeline_logger.warning(f"Skipped pipelines: {', '.join(skipped_pipelines)}")
+        bastion_logger.warning(f"Skipped pipelines: {', '.join(skipped_pipelines)}")
     return result
 
 

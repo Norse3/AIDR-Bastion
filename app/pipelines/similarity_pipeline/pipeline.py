@@ -1,9 +1,9 @@
 import asyncio
 
 from app.core.enums import PipelineNames, RuleAction
+from app.managers.similarity.manager import similarity_manager
 from app.models.pipeline import PipelineResult, TriggeredRuleData
-from app.modules.logger import pipeline_logger
-from app.modules.opensearch import os_client
+from app.modules.logger import bastion_logger
 from app.pipelines.base import BasePipeline
 from app.pipelines.similarity_pipeline.utils import split_text_into_sentences
 from app.utils import text_embedding
@@ -30,17 +30,11 @@ class SimilarityPipeline(BasePipeline):
 
     def __init__(self):
         super().__init__()
-        if not hasattr(os_client, "client") or os_client.client is None:
-            pipeline_logger.warning(f"[{self}] OpenSearch client is not initialized")
-            return
-        elif not settings.OS:
-            pipeline_logger.warning(f"[{self}] OpenSearch settings are not specified in environment variables")
-            return
-        if settings.OS and os_client.client:
+        if similarity_manager.has_active_client:
             self.enabled = True
-            pipeline_logger.info(f"[{self}] loaded successfully. OpenSearch: {settings.OS.host}")
+            bastion_logger.info(f"[{self}] loaded successfully. Active client: {similarity_manager.active_client}")
         else:
-            pipeline_logger.warning(f"[{self}] failed to load OpenSearch client. OpenSearch: {settings.OS.host}")
+            bastion_logger.warning(f"[{self}] failed to load Active client: {similarity_manager.active_client}")
 
     def __split_prompt_into_sentences(self, prompt: str) -> list[str]:
         """
@@ -69,7 +63,7 @@ class SimilarityPipeline(BasePipeline):
             list[dict]: List of similar documents with metadata and scores
         """
         vector = text_embedding(chunk)
-        similar_documents = await os_client.search_similar_documents(vector)
+        similar_documents = await similarity_manager.search_similar_documents(vector)
         return [
             {
                 "action": self._get_action(doc["_score"]),
@@ -125,7 +119,7 @@ class SimilarityPipeline(BasePipeline):
         """
         similar_documents = []
         chunks = self.__split_prompt_into_sentences(prompt)
-        pipeline_logger.info(f"Analyzing for {len(chunks)} sentences")
+        bastion_logger.info(f"Analyzing for {len(chunks)} sentences")
 
         batch_size = 5
         for i in range(0, len(chunks), batch_size):
@@ -135,7 +129,7 @@ class SimilarityPipeline(BasePipeline):
             for result in batch_results:
                 similar_documents.extend(result)
         triggered_rules = await self.__prepare_triggered_rules(similar_documents)
-        pipeline_logger.info(f"Found {len(triggered_rules)} similar documents")
+        bastion_logger.info(f"Found {len(triggered_rules)} similar documents")
         return PipelineResult(
             name=str(self), status=self._pipeline_status(triggered_rules), triggered_rules=triggered_rules
         )

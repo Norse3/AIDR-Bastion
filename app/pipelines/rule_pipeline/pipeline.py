@@ -4,11 +4,11 @@ from pathlib import Path
 from app.core.enums import PipelineNames
 from app.core.exceptions import ValidationException
 from app.models.pipeline import PipelineResult, TriggeredRuleData
-from app.modules.logger import pipeline_logger
+from app.modules.logger import bastion_logger
 from app.pipelines.base import BaseRulesPipeline
 
 
-class RegexPipeline(BaseRulesPipeline):
+class RulePipeline(BaseRulesPipeline):
     """
     Regular expression-based pipeline for pattern matching in prompts.
 
@@ -22,7 +22,7 @@ class RegexPipeline(BaseRulesPipeline):
         _rules (list): List of loaded regex rules for analysis
     """
 
-    name = PipelineNames.regex
+    name = PipelineNames.rule
     _rules_dir_path = str(Path(__file__).parent / "rules")
 
     def _validate_rule_dict(self, rule_dict: dict, file_path: str) -> None:
@@ -44,7 +44,7 @@ class RegexPipeline(BaseRulesPipeline):
             for pattern in rule_dict["detection"]["pattern"]:
                 re.compile(pattern, re.IGNORECASE | re.DOTALL)
         except re.error:
-            pipeline_logger.warning(f"Invalid regex pattern, rule_id={rule_dict['uuid']}")
+            bastion_logger.warning(f"Invalid regex pattern, rule_id={rule_dict['uuid']}")
             raise ValidationException()
 
     async def run(self, prompt: str, **kwargs) -> PipelineResult:
@@ -63,7 +63,7 @@ class RegexPipeline(BaseRulesPipeline):
             PipelineResult: Analysis result with triggered rules and status
         """
         triggered_rules = []
-        pipeline_logger.info(f"Analyzing for {len(self._rules)} rules")
+        bastion_logger.info(f"Analyzing for {len(self._rules)} rules")
         for rule in self._rules:
             if re.search(rule.body, prompt):
                 triggered_rules.append(
@@ -71,7 +71,7 @@ class RegexPipeline(BaseRulesPipeline):
                         id=rule.id, name=rule.name, details=rule.details, body=rule.body, action=rule.action
                     )
                 )
-        pipeline_logger.info(f"Found {len(triggered_rules)} triggered rules")
+        bastion_logger.info(f"Found {len(triggered_rules)} triggered rules")
         status = self._pipeline_status(triggered_rules)
-        pipeline_logger.info(f"Analyzing for {len(self._rules)} rules, status: {status}")
+        bastion_logger.info(f"Analyzing for {len(self._rules)} rules, status: {status}")
         return PipelineResult(name=str(self), triggered_rules=triggered_rules, status=status)

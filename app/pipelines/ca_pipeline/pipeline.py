@@ -7,7 +7,7 @@ from pathlib import Path
 from app.core.dataclasses import SemgrepLangConfig
 from app.core.enums import ActionStatus, Language, PipelineNames, RuleAction
 from app.models.pipeline import PipelineResult, TriggeredRuleData
-from app.modules.logger import pipeline_logger
+from app.modules.logger import bastion_logger
 from app.pipelines.base import BasePipeline
 
 
@@ -46,7 +46,7 @@ class CodeAnalysisPipeline(BasePipeline):
 
     def __init__(self):
         super().__init__()
-        pipeline_logger.info(
+        bastion_logger.info(
             f"[{self}] loaded successfully. Languages: {', '.join([lang.value for lang in self._languages_data_map.keys()])}"
         )
 
@@ -83,10 +83,10 @@ class CodeAnalysisPipeline(BasePipeline):
             PipelineResult: Analysis result with triggered rules and status
         """
         language = kwargs.get("language", "")
-        pipeline_logger.info(f"Analyzing for language: {language}")
+        bastion_logger.info(f"Analyzing for language: {language}")
         triggered_rule_data = await self._scan_for_language(prompt, language)
         status = ActionStatus.BLOCK if triggered_rule_data else ActionStatus.ALLOW
-        pipeline_logger.info(f"Analyzing for language: {language}, status: {status}")
+        bastion_logger.info(f"Analyzing for language: {language}, status: {status}")
         return PipelineResult(name=str(self), triggered_rules=triggered_rule_data, status=status)
 
     async def _scan_for_language(self, prompt: str, language: Language) -> list[TriggeredRuleData]:

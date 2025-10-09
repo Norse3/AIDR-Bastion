@@ -7,7 +7,7 @@ from app.core.enums import ActionStatus, RuleAction
 from app.core.exceptions import ValidationException
 from app.core.yml_parser import YmlFileParser
 from app.models.pipeline import PipelineResult, TriggeredRuleData
-from app.modules.logger import pipeline_logger
+from app.modules.logger import bastion_logger
 
 
 class BasePipeline(ABC):
@@ -115,9 +115,9 @@ class BaseRulesPipeline(BasePipeline):
         self._load_rules()
         if len(self._rules) > 0:
             self.enabled = True
-            pipeline_logger.info(f"[{self}] loaded successfully. Total rules: {len(self._rules)}")
+            bastion_logger.info(f"[{self}] loaded successfully. Total rules: {len(self._rules)}")
         else:
-            pipeline_logger.warning(f"[{self}] failed to load rules. Total rules: {len(self._rules)}")
+            bastion_logger.warning(f"[{self}] failed to load rules. Total rules: {len(self._rules)}")
 
     def _load_rules(self) -> None:
         """
@@ -135,7 +135,7 @@ class BaseRulesPipeline(BasePipeline):
                     try:
                         self._load_rules_from_yaml_file(os.path.join(root, file))
                     except Exception:
-                        pipeline_logger.exception(f"[{self}] Error loading rules from file: {file}")
+                        bastion_logger.exception(f"[{self}] Error loading rules from file: {file}")
 
     def _load_rules_from_yaml_file(self, file_path: str) -> None:
         """
@@ -150,7 +150,7 @@ class BaseRulesPipeline(BasePipeline):
         try:
             rule_dicts_gen = YmlFileParser.parse(file_path)
             if not rule_dicts_gen:
-                pipeline_logger.warning(f"Invalid rule, file_path={file_path}")
+                bastion_logger.warning(f"Invalid rule, file_path={file_path}")
                 return
             for rule_dict in rule_dicts_gen:
                 try:
@@ -172,7 +172,7 @@ class BaseRulesPipeline(BasePipeline):
                             )
                         )
         except Exception:
-            pipeline_logger.exception(f"[{self}] Error loading rules from file: {file_path}")
+            bastion_logger.exception(f"[{self}] Error loading rules from file: {file_path}")
 
     def _validate_rule_dict(self, rule_dict: dict, file_path: str) -> None:
         """
@@ -191,14 +191,14 @@ class BaseRulesPipeline(BasePipeline):
         required_fields = ["uuid", "name", "details", "detection"]
         missing_fields = [field for field in required_fields if field not in rule_dict]
         if missing_fields:
-            pipeline_logger.warning(
+            bastion_logger.warning(
                 f"Invalid rule, not all mandatory fields are present, file_path={file_path}, missing_fields={missing_fields}"
             )
             raise ValidationException()
         detection_fields = ["language", "pattern"]
         missing_detection_fields = [field for field in detection_fields if field not in rule_dict["detection"]]
         if missing_detection_fields:
-            pipeline_logger.warning(
+            bastion_logger.warning(
                 f"Invalid rule, not all mandatory detection fields are present, file_path={file_path}, missing_detection_fields={missing_detection_fields}"
             )
             raise ValidationException()
