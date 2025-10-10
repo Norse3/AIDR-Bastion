@@ -155,3 +155,9 @@ class BaseManager(ABC, Generic[T]):
         old_client_id = self._active_client_id
         self._set_active_client(client_id)
         return old_client_id != self._active_client_id
+
+    async def close_connections(self) -> None:
+        """
+        Close all connections for currently available clients.
+        """
+        ...

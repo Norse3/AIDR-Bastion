@@ -40,6 +40,7 @@ async def get_managers() -> ManagersListResponse:
             ManagerInfo(
                 id=manager_id,
                 name=str(manager),
+                description=manager.description,
                 enabled=manager.has_active_client,
                 clients=prepare_clients(manager)
             )

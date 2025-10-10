@@ -12,6 +12,7 @@ class ManagerInfo(BaseModel):
     id: ManagerNames
     name: str
     enabled: bool
+    description: str
     clients: list[ClientInfo]
 
 
