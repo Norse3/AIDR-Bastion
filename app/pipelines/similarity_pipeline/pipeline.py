@@ -1,12 +1,8 @@
-import asyncio
-
-from app.core.enums import PipelineNames, RuleAction
-from app.models.pipeline import PipelineResult, TriggeredRuleData
-from app.modules.logger import pipeline_logger
-from app.modules.opensearch import os_client
-from app.pipelines.base import BasePipeline
-from app.pipelines.similarity_pipeline.utils import split_text_into_sentences
-from app.utils import text_embedding
+from app.core.enums import ActionStatus, PipelineNames
+from app.core.pipeline import BasePipeline
+from app.managers import ALL_MANAGERS_MAP
+from app.models.pipeline import PipelineResult
+from app.modules.logger import bastion_logger
 from settings import get_settings
 
 settings = get_settings()
@@ -22,138 +18,49 @@ class SimilarityPipeline(BasePipeline):
     Results are deduplicated and scored based on similarity thresholds.
 
     Attributes:
-        name (PipelineNames): Pipeline name (similarity)
+        _identifier (PipelineNames): Pipeline identifier (similarity)
         enabled (bool): Whether pipeline is active (depends on OpenSearch settings)
     """
 
-    name = PipelineNames.similarity
+    _identifier = PipelineNames.similarity
+    description = "Similarity-based pipeline for detecting similar content using vector embeddings."
 
     def __init__(self):
         super().__init__()
-        if not hasattr(os_client, "client") or os_client.client is None:
-            pipeline_logger.warning(f"[{self}] OpenSearch client is not initialized")
-            return
-        elif not settings.OS:
-            pipeline_logger.warning(f"[{self}] OpenSearch settings are not specified in environment variables")
-            return
-        if settings.OS and os_client.client:
+        self.similarity_manager = ALL_MANAGERS_MAP["similarity"]
+
+    async def activate(self) -> None:
+        """
+        Activate the pipeline.
+        """
+        await self.similarity_manager._activate_clients()
+        if self.similarity_manager.has_active_client:
             self.enabled = True
-            pipeline_logger.info(f"[{self}] loaded successfully. OpenSearch: {settings.OS.host}")
-        else:
-            pipeline_logger.warning(f"[{self}] failed to load OpenSearch client. OpenSearch: {settings.OS.host}")
-
-    def __split_prompt_into_sentences(self, prompt: str) -> list[str]:
-        """
-        Split prompt into sentences and return them as a list.
-
-        Args:
-            prompt (str): Text prompt to split
-
-        Returns:
-            list[str]: List of sentences from the prompt
-        """
-        return split_text_into_sentences(prompt)
-
-    async def __search_similar_documents(self, chunk: str) -> list[dict]:
-        """
-        Search for similar documents using vector embeddings.
-
-        Converts text chunk to vector embedding and searches OpenSearch
-        for similar documents. Filters results by similarity threshold
-        and formats them for further processing.
-
-        Args:
-            chunk (str): Text chunk to search for similar content
-
-        Returns:
-            list[dict]: List of similar documents with metadata and scores
-        """
-        vector = text_embedding(chunk)
-        similar_documents = await os_client.search_similar_documents(vector)
-        return [
-            {
-                "action": self._get_action(doc["_score"]),
-                "doc_id": doc["_source"].get("id"),
-                "name": doc["_source"].get("category"),
-                "details": doc["_source"]["details"],
-                "body": doc["_source"]["text"],
-                "score": doc["_score"],
-            }
-            for doc in similar_documents
-            if doc["_score"] > settings.SIMILARITY_NOTIFY_THRESHOLD
-        ]
-
-    async def __prepare_triggered_rules(self, similar_documents: list[dict]) -> list[TriggeredRuleData]:
-        """
-        Prepare rules with deduplication by doc_id.
-
-        For identical documents, preference is given to those with higher score.
-        Converts similar documents to TriggeredRuleData objects.
-
-        Args:
-            similar_documents (list[dict]): List of documents with search results
-
-        Returns:
-            list[TriggeredRuleData]: List of unique TriggeredRuleData objects
-        """
-        deduplicated_docs = {}
-        for doc in similar_documents:
-            doc_id = doc["doc_id"]
-            if doc_id not in deduplicated_docs or doc["score"] > deduplicated_docs[doc_id]["score"]:
-                deduplicated_docs[doc_id] = doc
-        return [
-            TriggeredRuleData(
-                action=doc["action"], id=doc["doc_id"], name=doc["name"], details=doc["details"], body=doc["body"]
+            bastion_logger.info(
+                f"[{self}] loaded successfully. Active client: {str(self.similarity_manager._active_client)}"
             )
-            for doc in deduplicated_docs.values()
-        ]
+        else:
+            bastion_logger.warning(
+                f"[{self}] there are no active client. Check the Similarity Manager settings and logs."
+            )
 
     async def run(self, prompt: str, **kwargs) -> PipelineResult:
         """
-        Analyzes prompt for similar content using vector similarity search.
+        Performs AI-powered analysis of the prompt using OpenAI.
 
-        Splits the prompt into sentences, processes them in batches,
-        and searches for similar documents using vector embeddings.
-        Returns analysis results with triggered rules for similar content.
-
-        Args:
-            prompt (str): Text prompt to analyze for similar content
-            **kwargs: Additional keyword arguments (unused)
-
-        Returns:
-            PipelineResult: Analysis result with triggered rules and status
-        """
-        similar_documents = []
-        chunks = self.__split_prompt_into_sentences(prompt)
-        pipeline_logger.info(f"Analyzing for {len(chunks)} sentences")
-
-        batch_size = 5
-        for i in range(0, len(chunks), batch_size):
-            batch = chunks[i : i + batch_size]
-            tasks = [self.__search_similar_documents(chunk) for chunk in batch]
-            batch_results = await asyncio.gather(*tasks)
-            for result in batch_results:
-                similar_documents.extend(result)
-        triggered_rules = await self.__prepare_triggered_rules(similar_documents)
-        pipeline_logger.info(f"Found {len(triggered_rules)} similar documents")
-        return PipelineResult(
-            name=str(self), status=self._pipeline_status(triggered_rules), triggered_rules=triggered_rules
-        )
-
-    @staticmethod
-    def _get_action(score: float) -> RuleAction:
-        """
-        Determines action based on similarity score.
-
-        Compares the similarity score against configured thresholds
-        to determine whether to block or notify.
+        Sends the prompt to OpenAI API for analysis and processes the response
+        to determine if the content should be blocked, allowed, or flagged
+        for notification.
 
         Args:
-            score (float): Similarity score from vector search
+            prompt (str): Text prompt to analyze
 
         Returns:
-            RuleAction: BLOCK if score exceeds block threshold, otherwise NOTIFY
+            PipelineResult: Analysis result with triggered rules or ERROR status on error
         """
-        if score >= settings.SIMILARITY_BLOCK_THRESHOLD:
-            return RuleAction.BLOCK
-        return RuleAction.NOTIFY
+        try:
+            return await self.similarity_manager.run(text=prompt)
+        except Exception as err:
+            msg = f"Error analyzing prompt, error={str(err)}"
+            bastion_logger.error(msg)
+            return PipelineResult(name=str(self), triggered_rules=[], status=ActionStatus.ERROR, details=msg)

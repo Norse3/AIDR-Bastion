@@ -2,11 +2,10 @@ from enum import Enum
 
 
 class PipelineNames(str, Enum):
-    openai = "openai"
+    llm = "llm"
     ml = "ml"
     code_analysis = "code_analysis"
-    personal_info = "personal_info"
-    regex = "regex"
+    rule = "rule"
     similarity = "similarity"
 
 
@@ -44,3 +43,25 @@ class Language(str, Enum):
 class RuleAction(str, Enum):
     NOTIFY = "notify"
     BLOCK = "block"
+
+
+class SimilarityClientNames(str, Enum):
+    opensearch = "opensearch"
+    elasticsearch = "elasticsearch"
+
+
+class LLMClientNames(str, Enum):
+    openai = "openai"
+    deepseek = "deepseek"
+    anthropic = "anthropic"
+    google = "google"
+    azure = "azure"
+    ollama = "ollama"
+    groq = "groq"
+    mistral = "mistral"
+    gemini = "gemini"
+
+
+class ManagerNames(str, Enum):
+    similarity = "similarity"
+    llm = "llm"

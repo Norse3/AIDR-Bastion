@@ -1,9 +1,9 @@
 import joblib
 
 from app.core.enums import ActionStatus, PipelineNames, RuleAction
+from app.core.pipeline import BasePipeline
 from app.models.pipeline import PipelineResult, TriggeredRuleData
-from app.modules.logger import pipeline_logger
-from app.pipelines.base import BasePipeline
+from app.modules.logger import bastion_logger
 from app.utils import text_embedding
 from settings import get_settings
 
@@ -19,12 +19,13 @@ class MLPipeline(BasePipeline):
     representations of text (embeddings) for classification.
 
     Attributes:
-        name (PipelineNames): Pipeline name (ml)
+        _identifier (PipelineNames): Pipeline identifier (ml)
         model_classifier: Loaded machine learning model
         enabled (bool): Whether pipeline is active (depends on successful model loading)
     """
 
-    name = PipelineNames.ml
+    _identifier = PipelineNames.ml
+    description = "Machine learning-based pipeline for detecting malicious prompts."
 
     def __init__(self):
         """
@@ -36,9 +37,9 @@ class MLPipeline(BasePipeline):
         self.model_classifier = self._load_model()
         if self.model_classifier:
             self.enabled = True
-            pipeline_logger.info(f"[{self}] loaded successfully. Model path: {settings.ML_MODEL_PATH}")
+            bastion_logger.info(f"[{self}] loaded successfully. Model path: {settings.ML_MODEL_PATH}")
         else:
-            pipeline_logger.warning(f"[{self}] failed to load model. Model path: {settings.ML_MODEL_PATH}")
+            bastion_logger.warning(f"[{self}] failed to load model. Model path: {settings.ML_MODEL_PATH}")
 
     def __str__(self) -> str:
         return "ML Pipeline"
@@ -58,7 +59,7 @@ class MLPipeline(BasePipeline):
         try:
             return joblib.load(settings.ML_PIPELINE_PATH)
         except Exception as err:
-            pipeline_logger.error(f"Error loading model, error={str(err)}")
+            bastion_logger.error(f"Error loading model, error={str(err)}")
 
     def validate_prompt(self, prompt: str):
         """
@@ -78,7 +79,7 @@ class MLPipeline(BasePipeline):
                 predict = self.model_classifier.predict(embedding)
                 return predict
         except Exception as err:
-            pipeline_logger.warning(f"Error validating prompt, error={str(err)}")
+            bastion_logger.warning(f"Error validating prompt, error={str(err)}")
 
     async def run(self, prompt: str) -> PipelineResult:
         """
@@ -95,12 +96,12 @@ class MLPipeline(BasePipeline):
             PipelineResult: Analysis result with list of triggered rules
         """
         trigger_rules = []
-        pipeline_logger.info(f"Analyzing for {self.name}")
+        bastion_logger.info(f"Analyzing for {self._identifier}")
         if self.validate_prompt(prompt):
             msg = "ML Pipeline detected malicious prompt"
             trigger_rules.append(
-                TriggeredRuleData(id=self.name, name=self.name, details=msg, action=RuleAction.BLOCK)
+                TriggeredRuleData(id=self._identifier, name=str(self), details=msg, action=RuleAction.BLOCK)
             )
-            pipeline_logger.info(f"Analyzing for {self.name}, status: {ActionStatus.BLOCK}, details: {msg}")
-        pipeline_logger.info(f"Analyzing done for {self.name}")
+            bastion_logger.info(f"Analyzing for {self._identifier}, status: {ActionStatus.BLOCK}, details: {msg}")
+        bastion_logger.info(f"Analyzing done for {self._identifier}")
         return PipelineResult(name=str(self), triggered_rules=trigger_rules)

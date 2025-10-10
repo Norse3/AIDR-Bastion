@@ -3,8 +3,8 @@
         "pipeline_flow": "full_scan",
         "pipelines": [
             "similarity",
-            "regex",
-            "openai",
+            "rule",
+            "llm",
             "ml",
             "code_analysis"
         ]
@@ -19,13 +19,13 @@
         "pipeline_flow": "model_audit",
         "pipelines": [
             "ml",
-            "openai"
+            "llm"
         ]
     },
     {
         "pipeline_flow": "base_audit",
         "pipelines": [
-            "regex",
+            "rule",
             "similarity"
         ]
     }

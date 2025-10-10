@@ -1,4 +1,5 @@
 import json
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
@@ -6,16 +7,63 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.modules.logger import pipeline_logger
+logger = logging.getLogger(__name__)
 
 
-class OpenSearchSettings(BaseModel):
-    user: str
-    password: str
+class BaseSearchSettings(BaseModel):
+    """
+    Base class for search system settings.
+
+    Provides common configuration structure for Elasticsearch and OpenSearch clients.
+    """
+
+    user: Optional[str] = None
+    password: Optional[str] = None
     host: str
     port: int
     scheme: str = "https"
     pool_size: int = 10
+
+    def get_common_config(self) -> dict:
+        """
+        Returns common configuration parameters for all search clients.
+
+        Returns:
+            dict: Common configuration dictionary
+        """
+        config = {
+            "hosts": [f"{self.scheme}://{self.host}:{self.port}"],
+            "verify_certs": False,
+            "ssl_show_warn": False,
+            "retry_on_status": (500, 502, 503, 504),
+            "max_retries": 3,
+        }
+
+        if self.user and self.password:
+            config["basic_auth"] = (self.user, self.password)
+
+        return config
+
+
+class OpenSearchSettings(BaseSearchSettings):
+    def get_client_config(self) -> dict:
+        return {
+            **self.get_common_config(),
+            "pool_maxsize": self.pool_size,
+        }
+
+
+class ElasticsearchSettings(BaseSearchSettings):
+    def get_client_config(self) -> dict:
+        config = {
+            "hosts": [f"{self.scheme}://{self.host}:{self.port}"],
+        }
+
+        # Add authentication only if both user and password are provided
+        if self.user and self.password:
+            config["basic_auth"] = (self.user, self.password)
+
+        return config
 
 
 class KafkaSettings(BaseModel):
@@ -43,7 +91,7 @@ def _load_version() -> str:
         with open(version_path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except Exception as e:
-        pipeline_logger.error(f"Error reading VERSION file: {e}")
+        logger.error(f"Error reading VERSION file: {e}")
         return "unknown"
 
 
@@ -65,36 +113,27 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     OS: Optional[OpenSearchSettings] = None
+    ES: Optional[ElasticsearchSettings] = None
     KAFKA: Optional[KafkaSettings] = None
     PIPELINE_CONFIG: dict = Field(default_factory=dict)
 
     SIMILARITY_PROMPT_INDEX: str = "similarity-prompt-index"
+    SIMILARITY_DEFAULT_CLIENT: str = Field(default="opensearch", description="Default client for similarity search")
 
     SIMILARITY_NOTIFY_THRESHOLD: float = 0.7
     SIMILARITY_BLOCK_THRESHOLD: float = 0.87
 
-    CORS_ORIGINS: list[str] = Field(
-        default=["*"],
-        env="CORS_ORIGINS",
-        description="List of allowed origins for CORS"
-    )
+    CORS_ORIGINS: list[str] = Field(default=["*"], env="CORS_ORIGINS", description="List of allowed origins for CORS")
 
     EMBEDDINGS_MODEL: Optional[str] = Field(
-        default="nomic-ai/nomic-embed-text-v1.5",
-        description="Model for embeddings"
+        default="nomic-ai/nomic-embed-text-v1.5", description="Model for embeddings"
     )
 
-    OPENAI_API_KEY: Optional[str] = Field(
-        default="",
-        description="API key for OpenAI ChatGPT API"
-    )
-    OPENAI_MODEL: Optional[str] = Field(
-        default="gpt-4",
-        description="Default model for OpenAI ChatGPT API"
-    )
+    LLM_DEFAULT_CLIENT: Optional[str] = Field(default="openai", description="Default client for LLM")
+    OPENAI_API_KEY: Optional[str] = Field(default="", description="API key for OpenAI ChatGPT API")
+    OPENAI_MODEL: Optional[str] = Field(default="gpt-4", description="Default model for OpenAI ChatGPT API")
     OPENAI_BASE_URL: Optional[str] = Field(
-        default="https://api.openai.com/v1",
-        description="Default base URL for OpenAI ChatGPT API"
+        default="https://api.openai.com/v1", description="Default base URL for OpenAI ChatGPT API"
     )
 
     ML_MODEL_PATH: Optional[str] = None
@@ -115,7 +154,7 @@ def load_pipeline_config() -> dict:
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, ValueError, KeyError) as e:
-        pipeline_logger.error(f"Error reading config.json: {e}")
+        logger.error(f"Error reading config.json: {e}")
         return loaded_config
 
 

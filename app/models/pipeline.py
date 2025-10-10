@@ -36,8 +36,10 @@ class TaskResponse(BaseModel):
 
 
 class PipelineInfo(BaseModel):
+    id: str
     name: str
     enabled: bool
+    description: str
 
 
 class FlowInfo(BaseModel):

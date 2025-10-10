@@ -125,3 +125,19 @@ INDEX_MAPPING = {
         }
     },
 }
+
+# Alternative mapping for Elasticsearch without k-NN plugin
+INDEX_MAPPING_NO_KNN = {
+    "mappings": {
+        "properties": {
+            "vector": {
+                "type": "dense_vector",
+                "dims": 768,
+            },
+            "id": {"type": "keyword"},
+            "category": {"type": "text"},
+            "details": {"type": "text"},
+            "text": {"type": "text"},
+        }
+    },
+}

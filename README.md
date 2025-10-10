@@ -1,6 +1,6 @@
 # AIDR Bastion
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](VERSION)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109.2-green.svg)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/license-LGPL%20v3-blue.svg)](LICENSE)
@@ -23,7 +23,7 @@ Inspired by LlamaFirewall.
 - **Multi-Pipeline Detection**: Regex patterns, ML models, vector-based similarity detection, and LLM-based analysis
 - **Flexible Configuration**: Dynamic Pipeline configuration via JSON
 - **Real-time Analysis**: Fast async processing with configurable thresholds
-- **OpenSearch Integration**: Vector-based similarity search for prompt classification
+- **Client Managers**: Flexible client management (Elasticsearch, OpenSearch)
 - **RESTful API**: Easy integration with existing applications
 - **Extensible Architecture**: Simple plugin system for custom Pipelines
 
@@ -44,15 +44,17 @@ Inspired by LlamaFirewall.
       ┌──────────────────────────────┐
       │          Pipelines           │
       │ ┌──────────────────────────┐ │
-      │ │  Regex Pipeline          │ │
+      │ │  Rule Pipeline           │ │
       │ ├──────────────────────────┤ │
       │ │  Similarity Pipeline     │ │
+      │ │  (Similarity Manager)    │ │
       │ ├──────────────────────────┤ │
       │ │  Code Analysis Pipeline  │ │
       │ ├──────────────────────────┤ │
       │ │  ML Pipeline             │ │
       │ ├──────────────────────────┤ │
-      │ │  LLM (OpenAI) Pipeline   │ │
+      │ │  LLM Pipeline            │ │
+      │ │  (LLM Manager)           │ │
       │ └──────────────────────────┘ │
       └──────────────────────────────┘
 
@@ -65,6 +67,7 @@ Inspired by LlamaFirewall.
 - [Usage](#-usage)
 - [API Reference](#-api-reference)
 - [Pipelines](#-pipelines)
+- [Managers](#-managers)
 - [Rule Management and Customization](#-rule-management-and-customization)
 - [Adding Custom Pipelines](#-adding-custom-pipelines)
 - [Development](#-development)
@@ -77,7 +80,7 @@ Inspired by LlamaFirewall.
 ### Prerequisites
 
 - Python 3.12+
-- OpenSearch (for Similarity Pipeline)
+- OpenSearch or Elasticsearch (via Similarity Manager)
 - OpenAI API key (for LLM Pipeline)
 
 ### Quick Start
@@ -139,12 +142,23 @@ SIMILARITY_PROMPT_INDEX=
 SIMILARITY_NOTIFY_THRESHOLD=0.7
 SIMILARITY_BLOCK_THRESHOLD=0.87
 
+# Manager configuration
+SIMILARITY_DEFAULT_CLIENT=opensearch  # opensearch or elasticsearch
+LLM_DEFAULT_CLIENT=openai
+
 # OpenSearch configuration
 OS__HOST=
 OS__PORT=
 OS__SCHEME=
 OS__USER=
 OS__PASSWORD=
+
+# Elasticsearch configuration (alternative to OpenSearch)
+ES__HOST=
+ES__PORT=
+ES__SCHEME=
+ES__USER=
+ES__PASSWORD=
 
 # Kafka configuration (for event logging)
 KAFKA__BOOTSTRAP_SERVERS=localhost:9092
@@ -169,7 +183,7 @@ EMBEDDINGS_MODEL=
 
 ### Pipeline Configuration (config.json)
 
-The `config.json` file controls which Pipelines are active for each flow.
+The `config.json` file controls which Pipelines will be run for each flow.
 Default `config.json` configuraton:
 
 ```json
@@ -178,7 +192,7 @@ Default `config.json` configuraton:
         "pipeline_flow": "full_scan",
         "pipelines": [
             "similarity",
-            "regex",
+            "rule",
             "openai",
             "ml",
             "code_analysis"
@@ -200,7 +214,7 @@ Default `config.json` configuraton:
     {
         "pipeline_flow": "base_audit",
         "pipelines": [
-            "regex",
+            "rule",
             "similarity"
         ]
     }
@@ -238,18 +252,36 @@ print(f"Triggered rules: {result['result']}")
 flows_response = requests.get("http://localhost:8000/api/v1/flows")
 flows = flows_response.json()
 print(f"Available flows: {[flow['flow_name'] for flow in flows['flows']]}")
+
+# Get available managers and their clients
+managers_response = requests.get("http://localhost:8000/api/v1/manager/list")
+managers = managers_response.json()
+print(f"Available managers: {[manager['name'] for manager in managers['managers']]}")
+
+# Get information about a specific manager
+similarity_manager = requests.get("http://localhost:8000/api/v1/manager/similarity")
+manager_info = similarity_manager.json()
+print(f"Similarity Manager clients: {manager_info['clients']}")
+
+# Switch active client for a manager
+switch_response = requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json={
+    "manager_id": "similarity",
+    "client_id": "elasticsearch"
+})
+switch_result = switch_response.json()
+print(f"Client switched: {switch_result['status']}")
 ```
 
 ### Python SDK Usage
 
 ```python
-from app.manager import pipeline_manager
+from app.main import bastion_app
 
 # Direct usage
-result = await pipeline_manager.run_pipeline("Your prompt", "default")
+result = await bastion_app.run_pipeline("Your prompt", "default")
 print(f"Status: {result.status}")
 for pipeline in result.pipelines:
-    print(f"Pipeline: {pipeline.name}, Status: {pipeline.status}")
+    print(f"Pipeline: {pipeline._identifier}, Status: {pipeline.status}")
 ```
 
 ### Integration with Existing Applications
@@ -280,6 +312,28 @@ def check_prompt_safety(prompt: str):
 
 2. **Configure your application to check all user inputs**
 3. **Set up proper error handling and fallbacks**
+4. **Manage managers and clients dynamically**:
+```python
+import requests
+
+def get_available_clients():
+    """Get list of available clients for each manager"""
+    response = requests.get("http://localhost:8000/api/v1/manager/list")
+    managers = response.json()
+    
+    for manager in managers['managers']:
+        print(f"{manager['name']}: {manager['clients']}")
+        print(f"Enabled: {manager['enabled']}")
+
+def switch_to_elasticsearch():
+    """Switch Similarity Manager to use Elasticsearch"""
+    response = requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json={
+        "manager_id": "similarity",
+        "client_id": "elasticsearch"
+    })
+    result = response.json()
+    return result['status']
+```
 
 ### Project Configuration
 
@@ -353,11 +407,66 @@ Get a list of all available flows and their pipelines.
 }
 ```
 
+### GET /api/v1/manager/list
+
+Get a list of all available managers and their clients.
+
+**Response:**
+```json
+{
+    "managers": [
+        {
+            "id": "string",
+            "name": "string",
+            "enabled": "boolean",
+            "clients": ["string"]
+        }
+    ]
+}
+```
+
+### GET /api/v1/manager/{manager_id}
+
+Get information about a specific manager.
+
+**Parameters:**
+- `manager_id` (string): ID of the manager (e.g., "similarity", "llm")
+
+**Response:**
+```json
+{
+    "id": "string",
+    "name": "string",
+    "enabled": "boolean",
+    "clients": ["string"]
+}
+```
+
+### POST /api/v1/manager/switch_active_client
+
+Switch the active client for a specific manager.
+
+**Request Body:**
+```json
+{
+    "manager_id": "string",
+    "client_id": "string"
+}
+```
+
+**Response:**
+```json
+{
+    "client_id": "string",
+    "status": "boolean"
+}
+```
+
 ## 🔍 Pipelines
 
-### 1. Regex Pipeline (`regex`)
+### 1. Rule Pipeline (`rule`)
 - **Purpose**: Pattern-based detection using regular expressions
-- **Rules**: YAML files in `app/pipelines/regex_pipeline/rules/`
+- **Rules**: YAML files in `app/pipelines/rule_pipeline/rules/`
 - **Categories**: 
   - **Injection**: SQL, command execution, path traversal
   - **Obfuscation**: Character obfuscation, encoding, Unicode homoglyphs
@@ -370,9 +479,9 @@ Get a list of all available flows and their pipelines.
 
 ### 2. Similarity Pipeline (`similarity`)
 - **Purpose**: Vector-based similarity detection against known harmful prompts
-- **Backend**: OpenSearch with vector search
-- **Required**: OpenSearch configuration
-- **Configuration**: `SIMILARITY_NOTIFY_THRESHOLD`, `SIMILARITY_BLOCK_THRESHOLD`
+- **Backend**: Uses [Similarity Manager](#similarity-manager) for vector search
+- **Required**: OpenSearch or Elasticsearch configuration via [Similarity Manager](#similarity-manager)
+- **Configuration**: `SIMILARITY_NOTIFY_THRESHOLD`, `SIMILARITY_BLOCK_THRESHOLD`, `SIMILARITY_DEFAULT_CLIENT`
 - **Best for**: Detecting variations of known attacks
 
 ### 3. Code Analysis Pipeline (`code_analysis`)
@@ -390,16 +499,52 @@ Get a list of all available flows and their pipelines.
 
 ### 5. LLM Pipeline (`openai`)
 - **Purpose**: AI-powered analysis using OpenAI GPT models
-- **Configuration**: Requires `OPENAI_API_KEY` and `OPENAI_MODEL` (default is gpt-4). The `OPENAI_BASE_URL` environment variable is optional; by default, it is set to https://api.openai.com/v1
+- **Backend**: Uses [LLM Manager](#llm-manager) for text analysis
+- **Configuration**: `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `LLM_DEFAULT_CLIENT`
 - **Features**: JSON response format, configurable models, intelligent decision-making
 - **Response Format**: Returns structured JSON with status (block/notify/allow) and reasoning
 - **Best for**: Complex reasoning and context-aware analysis
 
+## 👥 Managers
+
+The system uses managers to control different types of clients and provide a unified interface for pipelines.
+
+**Available managers:**
+- **Similarity Manager** - manages search clients for vector search
+- **LLM Manager** - manages LLM clients for text analysis
+
+### Similarity Manager
+Manages search systems for vector search of similar content. Automatically selects available client based on configuration.
+
+**Available clients:**
+- **OpenSearch Client** (default)
+- **Elasticsearch Client** 
+
+Use the SIMILARITY_DEFAULT_CLIENT environment variable to set the New default client.
+The endpoint `/api/v1/manager/switch_active_client` also allows this.
+
+**Clients in development:**
+- Planned support for other vector databases (PostgreSQL, Qdrant)
+- You can contribute clients
+
+### LLM Manager
+Manages LLM providers for text analysis and classification.
+
+**Available clients:**
+- **OpenAI Client** - GPT models support
+
+Use the LLM_DEFAULT_CLIENT environment variable to set the default client.
+The endpoint `/api/v1/manager/switch_active_client` also allows this.
+
+**Clients in development:**
+- Planned support for other LLM providers (Anthropic, Google, local models)
+- You can contribute clients
+
 ## 📋 Rule Management and Customization
 
-### YAML Rules for Regex Pipeline
+### YAML Rules for Rule Pipeline
 
-The Regex Pipeline defines detection patterns using [Roota](https://github.com/UncoderIO/Roota) rules files. Roota is a public-domain language for collective cyber defense that combines native queries from SIEM, EDR, XDR, or Data Lake with standardized metadata and threat intelligence to enable automated translation into other languages.
+The Rule Pipeline defines detection patterns using [Roota](https://github.com/UncoderIO/Roota) rules files. Roota is a public-domain language for collective cyber defense that combines native queries from SIEM, EDR, XDR, or Data Lake with standardized metadata and threat intelligence to enable automated translation into other languages.
 
 Each rule file follows a specific structure:
 
@@ -516,7 +661,7 @@ detection:
 
 ### Custom Rule Development
 
-#### Creating Custom Regex Rules
+#### Creating Custom regex Rules
 
 1. **Identify the attack pattern**
 2. **Create YAML file** in appropriate category folder
@@ -571,6 +716,22 @@ rules:
       # Use parameterized queries
 ```
 
+## ⚙️ Client Selection
+
+### Priority Client Selection
+- **Similarity Manager**: Uses `SIMILARITY_DEFAULT_CLIENT` to choose between OpenSearch and Elasticsearch
+- **LLM Manager**: Uses `LLM_DEFAULT_CLIENT` to choose LLM provider
+- **Dynamic switching**: Can change active client via API endpoint `/api/v1/manager/switch_active_client`
+
+#### Priority Configuration
+```env
+# Priority for Similarity Manager
+SIMILARITY_DEFAULT_CLIENT=opensearch  # or elasticsearch
+
+# Priority for LLM Manager  
+LLM_DEFAULT_CLIENT=openai
+```
+
 ## ⚙️ Enabling Disabled Pipeline
 
 Some pipelines are disabled by default. To enable them:
@@ -586,7 +747,7 @@ Some pipelines are disabled by default. To enable them:
    ```json
    {
        "flow_name": "base",
-       "pipelines": ["similarity", "regex", "openai"]
+       "pipelines": ["similarity", "rule", "openai"]
    }
    ```
 
@@ -600,7 +761,7 @@ Some pipelines are disabled by default. To enable them:
    ```json
    {
        "flow_name": "base",
-       "pipelines": ["similarity", "regex", "ml"]
+       "pipelines": ["similarity", "rule", "ml"]
    }
    ```
 
@@ -610,7 +771,7 @@ Some pipelines are disabled by default. To enable them:
 
 ```python
 # app/pipelines/my_pipeline/pipeline.py
-from app.pipelines.base import BasePipeline
+from app.core.pipeline import BasePipeline
 from app.core.enums import PipelineNames, ActionStatus
 from app.models.pipeline import PipelineResult, TriggeredRuleData
 
@@ -634,7 +795,7 @@ class MyCustomPipeline(BasePipeline):
 
         status = ActionStatus.BLOCK if triggered_rules else ActionStatus.ALLOW
         return PipelineResult(
-            name=self.name,
+            name=self._identifier,
             status=status,
             triggered_rules=triggered_rules
         )
@@ -652,7 +813,7 @@ __PIPELINES__ = [
 ]
 
 PIPELINES_MAP = {
-    pipeline.name: pipeline for pipeline in __PIPELINES__
+    pipeline._identifier: pipeline for pipeline in __PIPELINES__
     if pipeline.enabled
 }
 ```
@@ -666,7 +827,7 @@ PIPELINES_MAP = {
         "pipelines": [
             "personal_info",
             "similarity",
-            "regex",
+            "rule",
             "my_pipeline"
         ]
     }
@@ -693,10 +854,25 @@ class PipelineNames(str, Enum):
 
 2. **Create similarity index**
    ```bash
-   python app/pipelines/similarity_pipeline/index_script.py
+   python app/scripts/similarity/index_script.py
    ```
    
    This will create the `similarity-prompt-index` index in OpenSearch. You can customize the index name by setting the SIMILARITY_PROMPT_INDEX environment variable.
+
+### Setting up Elasticsearch
+
+1. **Install Elasticsearch**
+   ```bash
+   # Alternative to OpenSearch
+   docker run -p 9200:9200 -e "discovery.type=single-node" elasticsearch:latest
+   ```
+
+2. **Create similarity index**
+   ```bash
+   python app/scripts/similarity/index_script.py
+   ```
+   
+   This will create the `similarity-prompt-index` index in Elasticsearch. You can customize the index name by setting the SIMILARITY_PROMPT_INDEX environment variable.
 
 ### Setting up Kafka for Event Logging
 
@@ -800,6 +976,7 @@ This project is built using the following powerful open-source libraries and fra
 - **[Uncoder AI](https://tdm.socprime.com/uncoder-ai/)**: Convert Roota/Sigma rules to Semgrep format
 - **[FastAPI](https://fastapi.tiangolo.com/)** - Modern, fast web framework for building APIs with Python 3.7+ based on standard Python type hints
 - **[OpenSearch](https://opensearch.org/)** - Open source search and analytics suite for log analytics, application search, and more
+- **[Elasticsearch](https://www.elastic.co/elasticsearch/)** - Open search and analytics platform for various data types
 - **[OpenAI](https://openai.com/)** - AI research company providing powerful language models for intelligent content analysis
 - **[Semgrep](https://semgrep.dev/)** - Static analysis tool for finding bugs and security issues in code
 - **[Sentence Transformers](https://www.sbert.net/)** - Python framework for state-of-the-art sentence, text and image embeddings

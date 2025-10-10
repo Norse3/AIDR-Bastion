@@ -2,14 +2,14 @@ import asyncio
 from datetime import datetime
 
 from app.core.enums import ActionStatus
+from app.core.pipeline import BasePipeline
 from app.models.pipeline import PipelineResult, TaskResult
-from app.pipelines.base import BasePipeline
-from app.utils import get_pipelines_from_config
 from app.modules.kafka_client import KafkaClient
+from app.utils import get_pipelines_from_config
 from settings import get_settings
 
 
-class PipelineManager:
+class BastionApp:
     """
     Manages the execution of multiple pipelines based on configuration.
 
@@ -20,7 +20,7 @@ class PipelineManager:
 
     def __init__(self):
         """
-        Initialize the PipelineManager with configuration from settings.
+        Initialize the BastionApp with configuration from settings.
 
         Loads pipeline configuration from settings and creates a mapping of
         pipeline flows to their corresponding pipeline instances.
@@ -73,7 +73,7 @@ class PipelineManager:
                 payload["task_id"] = task_id
             self.kafka_client.send_message(payload)
 
-    async def run_pipeline(self, prompt: str, pipeline_flow: str, task_id: str | int | None = None) -> TaskResult:
+    async def run(self, prompt: str, pipeline_flow: str, task_id: str | int | None = None) -> TaskResult:
         """
         Executes the task process for a given prompt using the specified pipeline flow.
 
@@ -99,4 +99,4 @@ class PipelineManager:
         return task
 
 
-pipeline_manager: PipelineManager = PipelineManager()
+bastion_app: BastionApp = BastionApp()
