@@ -763,7 +763,7 @@ Some pipelines are disabled by default. To enable them:
 
 ```python
 # app/pipelines/my_pipeline/pipeline.py
-from app.pipelines.base import BasePipeline
+from app.core.pipeline import BasePipeline
 from app.core.enums import PipelineNames, ActionStatus
 from app.models.pipeline import PipelineResult, TriggeredRuleData
 

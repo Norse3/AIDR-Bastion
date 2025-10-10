@@ -75,7 +75,6 @@ class BaseManager(ABC, Generic[T]):
             except Exception as e:
                 bastion_logger.error(f"[{client_class._identifier}] Failed to initialize. Error: {e}")
 
-    @property
     async def _activate_clients(self) -> None:
         """
         Activates all initialized clients.

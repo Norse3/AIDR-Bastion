@@ -3,9 +3,9 @@ from pathlib import Path
 
 from app.core.enums import PipelineNames
 from app.core.exceptions import ValidationException
+from app.core.pipeline import BaseRulesPipeline
 from app.models.pipeline import PipelineResult, TriggeredRuleData
 from app.modules.logger import bastion_logger
-from app.pipelines.base import BaseRulesPipeline
 
 
 class RulePipeline(BaseRulesPipeline):

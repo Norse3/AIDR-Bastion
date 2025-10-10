@@ -1,8 +1,8 @@
 from app.core.enums import ActionStatus, PipelineNames
+from app.core.pipeline import BasePipeline
 from app.managers import ALL_MANAGERS_MAP
 from app.models.pipeline import PipelineResult
 from app.modules.logger import bastion_logger
-from app.pipelines.base import BasePipeline
 from settings import get_settings
 
 settings = get_settings()
@@ -34,15 +34,21 @@ class LLMPipeline(BasePipeline):
         Sets up the LLM API client with the provided API key and configures
         the model for analysis. Enables the pipeline if API key is available.
         """
-        self.llm_manager = ALL_MANAGERS_MAP['llm']
+        self.llm_manager = ALL_MANAGERS_MAP["llm"]
+
+    def __str__(self) -> str:
+        return "LLM Pipeline"
+
+    async def activate(self) -> None:
+        """
+        Activate the pipeline.
+        """
+        await self.llm_manager._activate_clients()
         if self.llm_manager.has_active_client:
             self.enabled = True
             bastion_logger.info(f"[{self}] loaded successfully. Active client: {str(self.llm_manager._active_client)}")
         else:
             bastion_logger.warning(f"[{self}] there are no active client. Check the LLM Manager settings and logs.")
-
-    def __str__(self) -> str:
-        return "LLM Pipeline"
 
     async def run(self, prompt: str) -> PipelineResult:
         """

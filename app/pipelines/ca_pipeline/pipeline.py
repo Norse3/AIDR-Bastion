@@ -6,9 +6,9 @@ from pathlib import Path
 
 from app.core.dataclasses import SemgrepLangConfig
 from app.core.enums import ActionStatus, Language, PipelineNames, RuleAction
+from app.core.pipeline import BasePipeline
 from app.models.pipeline import PipelineResult, TriggeredRuleData
 from app.modules.logger import bastion_logger
-from app.pipelines.base import BasePipeline
 
 
 class CodeAnalysisPipeline(BasePipeline):

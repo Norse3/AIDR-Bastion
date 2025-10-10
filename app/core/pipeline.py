@@ -46,6 +46,12 @@ class BasePipeline(ABC):
         """
         return self.__str__()
 
+    async def activate(self) -> None:
+        """
+        Abstract method to activate the pipeline.
+        """
+        ...
+
     @abstractmethod
     async def run(self, prompt: str, **kwargs) -> PipelineResult:
         """

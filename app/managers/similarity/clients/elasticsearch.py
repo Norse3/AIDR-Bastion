@@ -7,6 +7,7 @@ from app.models.pipeline import TriggeredRuleData
 from app.modules.logger import bastion_logger
 from app.core.enums import SimilarityClientNames
 from settings import get_settings
+from scripts.similarity.const import INDEX_MAPPING_NO_KNN
 
 
 class AsyncElasticsearchClient(BaseSearchClientMethods):
@@ -69,8 +70,19 @@ class AsyncElasticsearchClient(BaseSearchClientMethods):
                 f"[{self.similarity_prompt_index}] Vector dimension mismatch: expected 768, got {len(vector)}"
             )
 
-        # Use KNN query for vector similarity search
-        body = {"size": 5, "query": {"knn": {"vector": {"vector": vector, "k": 5}}}}
+        # Use script_score query for vector similarity search (for Elasticsearch without k-NN plugin)
+        body = {
+            "size": 5,
+            "query": {
+                "script_score": {
+                    "query": {"match_all": {}},
+                    "script": {
+                        "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
+                        "params": {"query_vector": vector}
+                    }
+                }
+            }
+        }
 
         # Log the query for debugging
         bastion_logger.debug(
@@ -91,18 +103,6 @@ class AsyncElasticsearchClient(BaseSearchClientMethods):
         if resp:
             documents = {}
             for hit in resp.get("hits", {}).get("hits", []):
-                if hit["_source"]["category"] not in documents:
-                    documents[hit["_source"]["category"]] = hit
-            return list(documents.values())
-
-        # Fallback: try simpler KNN query if the main one failed
-        bastion_logger.warning(f"[{self.similarity_prompt_index}] Main KNN query failed, trying fallback")
-        fallback_body = {"size": 5, "query": {"knn": {"vector": {"vector": vector, "k": 3}}}}
-
-        fallback_resp = await self._search(index=self.similarity_prompt_index, body=fallback_body)
-        if fallback_resp:
-            documents = {}
-            for hit in fallback_resp.get("hits", {}).get("hits", []):
                 if hit["_source"]["category"] not in documents:
                     documents[hit["_source"]["category"]] = hit
             return list(documents.values())
@@ -134,3 +134,15 @@ class AsyncElasticsearchClient(BaseSearchClientMethods):
             )
             for doc in deduplicated_docs.values()
         ]
+
+    async def index_create(self) -> bool:
+        """
+        Creates index with alternative mapping for Elasticsearch without k-NN plugin.
+        """
+        try:
+            return await self._client.indices.create(
+                index=self.similarity_prompt_index, body=INDEX_MAPPING_NO_KNN
+            )
+        except Exception as e:
+            bastion_logger.error(f"[{self}][{self._search_settings.host}][{self.similarity_prompt_index}] Failed to create index: {e}")
+            return False

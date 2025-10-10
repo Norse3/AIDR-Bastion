@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.managers import ALL_MANAGERS_MAP
 from app.modules.logger import bastion_logger
+from app.pipelines import PIPELINES_MAP
 from app.routers.manager import manager_router
 from app.routers.flow import flow_router
 from settings import get_settings
@@ -15,8 +16,8 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
-    for manager in ALL_MANAGERS_MAP.values():
-        await manager._activate_clients()
+    for manager in PIPELINES_MAP.values():
+        await manager.activate()
     yield
     for manager in ALL_MANAGERS_MAP.values():
         await manager.close_connections()

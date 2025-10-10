@@ -18,7 +18,7 @@ from app.modules.logger import bastion_logger
 from settings import get_settings
 
 if TYPE_CHECKING:
-    from app.pipelines.base import BasePipeline
+    from app.core.pipeline import BasePipeline
 
 
 settings = get_settings()

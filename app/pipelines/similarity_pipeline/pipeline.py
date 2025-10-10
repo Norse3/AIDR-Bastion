@@ -1,8 +1,8 @@
 from app.core.enums import ActionStatus, PipelineNames
+from app.core.pipeline import BasePipeline
 from app.managers import ALL_MANAGERS_MAP
 from app.models.pipeline import PipelineResult
 from app.modules.logger import bastion_logger
-from app.pipelines.base import BasePipeline
 from settings import get_settings
 
 settings = get_settings()
@@ -27,12 +27,22 @@ class SimilarityPipeline(BasePipeline):
 
     def __init__(self):
         super().__init__()
-        self.similarity_manager = ALL_MANAGERS_MAP['similarity']
+        self.similarity_manager = ALL_MANAGERS_MAP["similarity"]
+
+    async def activate(self) -> None:
+        """
+        Activate the pipeline.
+        """
+        await self.similarity_manager._activate_clients()
         if self.similarity_manager.has_active_client:
             self.enabled = True
-            bastion_logger.info(f"[{self}] loaded successfully. Active client: {str(self.similarity_manager._active_client)}")
+            bastion_logger.info(
+                f"[{self}] loaded successfully. Active client: {str(self.similarity_manager._active_client)}"
+            )
         else:
-            bastion_logger.warning(f"[{self}] there are no active client. Check the Similarity Manager settings and logs.")
+            bastion_logger.warning(
+                f"[{self}] there are no active client. Check the Similarity Manager settings and logs."
+            )
 
     async def run(self, prompt: str, **kwargs) -> PipelineResult:
         """

@@ -2,10 +2,10 @@ import asyncio
 from datetime import datetime
 
 from app.core.enums import ActionStatus
+from app.core.pipeline import BasePipeline
 from app.models.pipeline import PipelineResult, TaskResult
-from app.pipelines.base import BasePipeline
-from app.utils import get_pipelines_from_config
 from app.modules.kafka_client import KafkaClient
+from app.utils import get_pipelines_from_config
 from settings import get_settings
 
 

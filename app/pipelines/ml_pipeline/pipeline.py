@@ -1,9 +1,9 @@
 import joblib
 
 from app.core.enums import ActionStatus, PipelineNames, RuleAction
+from app.core.pipeline import BasePipeline
 from app.models.pipeline import PipelineResult, TriggeredRuleData
 from app.modules.logger import bastion_logger
-from app.pipelines.base import BasePipeline
 from app.utils import text_embedding
 from settings import get_settings
 
@@ -99,7 +99,9 @@ class MLPipeline(BasePipeline):
         bastion_logger.info(f"Analyzing for {self._identifier}")
         if self.validate_prompt(prompt):
             msg = "ML Pipeline detected malicious prompt"
-            trigger_rules.append(TriggeredRuleData(id=self._identifier, name=str(self), details=msg, action=RuleAction.BLOCK))
+            trigger_rules.append(
+                TriggeredRuleData(id=self._identifier, name=str(self), details=msg, action=RuleAction.BLOCK)
+            )
             bastion_logger.info(f"Analyzing for {self._identifier}, status: {ActionStatus.BLOCK}, details: {msg}")
         bastion_logger.info(f"Analyzing done for {self._identifier}")
         return PipelineResult(name=str(self), triggered_rules=trigger_rules)
