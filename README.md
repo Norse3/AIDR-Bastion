@@ -517,10 +517,11 @@ The system uses managers to control different types of clients and provide a uni
 Manages search systems for vector search of similar content. Automatically selects available client based on configuration.
 
 **Available clients:**
-- **OpenSearch Client** - primary search system
-- **Elasticsearch Client** - alternative search system
+- **OpenSearch Client** (default)
+- **Elasticsearch Client** 
 
-Use the SIMILARITY_DEFAULT_CLIENT environment variable to set the default client. The default is `opensearch`.
+Use the SIMILARITY_DEFAULT_CLIENT environment variable to set the New default client.
+The endpoint `/api/v1/manager/switch_active_client` also allows this.
 
 **Clients in development:**
 - Planned support for other vector databases (PostgreSQL, Qdrant)
@@ -532,7 +533,8 @@ Manages LLM providers for text analysis and classification.
 **Available clients:**
 - **OpenAI Client** - GPT models support
 
-Use the LLM_DEFAULT_CLIENT environment variable to set the default client. The default is `openai`.
+Use the LLM_DEFAULT_CLIENT environment variable to set the default client.
+The endpoint `/api/v1/manager/switch_active_client` also allows this.
 
 **Clients in development:**
 - Planned support for other LLM providers (Anthropic, Google, local models)
