@@ -275,10 +275,10 @@ print(f"Client switched: {switch_result['status']}")
 ### Python SDK Usage
 
 ```python
-from app.manager import pipeline_manager
+from app.main import bastion_app
 
 # Direct usage
-result = await pipeline_manager.run_pipeline("Your prompt", "default")
+result = await bastion_app.run_pipeline("Your prompt", "default")
 print(f"Status: {result.status}")
 for pipeline in result.pipelines:
     print(f"Pipeline: {pipeline._identifier}, Status: {pipeline.status}")

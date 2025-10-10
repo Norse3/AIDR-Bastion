@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.manager import pipeline_manager
+from app.main import bastion_app
 from app.models.pipeline import (
     FlowInfo,
     FlowsResponse,
@@ -14,7 +14,7 @@ flow_router = APIRouter(prefix="/flow", tags=["Flow API"])
 
 @flow_router.post("/run")
 async def run_flow(request: TaskRequest) -> TaskResult:
-    task_result = await pipeline_manager.run_pipeline(
+    task_result = await bastion_app.run(
         prompt=request.prompt, pipeline_flow=request.pipeline_flow, task_id=request.task_id
     )
     return task_result
@@ -30,7 +30,7 @@ async def get_flows_list() -> FlowsResponse:
     """
     flows = []
 
-    for flow_name, pipelines in pipeline_manager.pipeline_flows.items():
+    for flow_name, pipelines in bastion_app.pipeline_flows.items():
         pipeline_infos = [
             PipelineInfo(
                 id=pipeline._identifier,

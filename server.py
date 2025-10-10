@@ -16,8 +16,8 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
-    for manager in PIPELINES_MAP.values():
-        await manager.activate()
+    for pipeline in PIPELINES_MAP.values():
+        await pipeline.activate()
     yield
     for manager in ALL_MANAGERS_MAP.values():
         await manager.close_connections()
