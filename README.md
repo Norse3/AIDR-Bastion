@@ -1,6 +1,6 @@
 # AIDR Bastion
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](VERSION)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109.2-green.svg)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/license-LGPL%20v3-blue.svg)](LICENSE)
@@ -23,7 +23,7 @@ Inspired by LlamaFirewall.
 - **Multi-Pipeline Detection**: Regex patterns, ML models, vector-based similarity detection, and LLM-based analysis
 - **Flexible Configuration**: Dynamic Pipeline configuration via JSON
 - **Real-time Analysis**: Fast async processing with configurable thresholds
-- **Elasticsearch Integration**: Vector-based similarity search for prompt classification
+- **Client Managers**: Flexible client management (Elasticsearch, OpenSearch)
 - **RESTful API**: Easy integration with existing applications
 - **Extensible Architecture**: Simple plugin system for custom Pipelines
 
@@ -44,7 +44,7 @@ Inspired by LlamaFirewall.
       ┌──────────────────────────────┐
       │          Pipelines           │
       │ ┌──────────────────────────┐ │
-      │ │  Regex Pipeline          │ │
+      │ │  Rule Pipeline           │ │
       │ ├──────────────────────────┤ │
       │ │  Similarity Pipeline     │ │
       │ │  (Similarity Manager)    │ │
@@ -183,7 +183,7 @@ EMBEDDINGS_MODEL=
 
 ### Pipeline Configuration (config.json)
 
-The `config.json` file controls which Pipelines are active for each flow.
+The `config.json` file controls which Pipelines will be run for each flow.
 Default `config.json` configuraton:
 
 ```json
@@ -192,7 +192,7 @@ Default `config.json` configuraton:
         "pipeline_flow": "full_scan",
         "pipelines": [
             "similarity",
-            "regex",
+            "rule",
             "openai",
             "ml",
             "code_analysis"
@@ -214,7 +214,7 @@ Default `config.json` configuraton:
     {
         "pipeline_flow": "base_audit",
         "pipelines": [
-            "regex",
+            "rule",
             "similarity"
         ]
     }
@@ -464,9 +464,9 @@ Switch the active client for a specific manager.
 
 ## 🔍 Pipelines
 
-### 1. Regex Pipeline (`regex`)
+### 1. Rule Pipeline (`rule`)
 - **Purpose**: Pattern-based detection using regular expressions
-- **Rules**: YAML files in `app/pipelines/regex_pipeline/rules/`
+- **Rules**: YAML files in `app/pipelines/rule_pipeline/rules/`
 - **Categories**: 
   - **Injection**: SQL, command execution, path traversal
   - **Obfuscation**: Character obfuscation, encoding, Unicode homoglyphs
@@ -520,8 +520,11 @@ Manages search systems for vector search of similar content. Automatically selec
 - **OpenSearch Client** - primary search system
 - **Elasticsearch Client** - alternative search system
 
+Use the SIMILARITY_DEFAULT_CLIENT environment variable to set the default client. The default is `opensearch`.
+
 **Clients in development:**
-- Planned support for other vector databases
+- Planned support for other vector databases (PostgreSQL, Qdrant)
+- You can contribute clients
 
 ### LLM Manager
 Manages LLM providers for text analysis and classification.
@@ -529,14 +532,17 @@ Manages LLM providers for text analysis and classification.
 **Available clients:**
 - **OpenAI Client** - GPT models support
 
+Use the LLM_DEFAULT_CLIENT environment variable to set the default client. The default is `openai`.
+
 **Clients in development:**
 - Planned support for other LLM providers (Anthropic, Google, local models)
+- You can contribute clients
 
 ## 📋 Rule Management and Customization
 
-### YAML Rules for Regex Pipeline
+### YAML Rules for Rule Pipeline
 
-The Regex Pipeline defines detection patterns using [Roota](https://github.com/UncoderIO/Roota) rules files. Roota is a public-domain language for collective cyber defense that combines native queries from SIEM, EDR, XDR, or Data Lake with standardized metadata and threat intelligence to enable automated translation into other languages.
+The Rule Pipeline defines detection patterns using [Roota](https://github.com/UncoderIO/Roota) rules files. Roota is a public-domain language for collective cyber defense that combines native queries from SIEM, EDR, XDR, or Data Lake with standardized metadata and threat intelligence to enable automated translation into other languages.
 
 Each rule file follows a specific structure:
 
@@ -653,7 +659,7 @@ detection:
 
 ### Custom Rule Development
 
-#### Creating Custom Regex Rules
+#### Creating Custom regex Rules
 
 1. **Identify the attack pattern**
 2. **Create YAML file** in appropriate category folder
@@ -739,7 +745,7 @@ Some pipelines are disabled by default. To enable them:
    ```json
    {
        "flow_name": "base",
-       "pipelines": ["similarity", "regex", "openai"]
+       "pipelines": ["similarity", "rule", "openai"]
    }
    ```
 
@@ -753,7 +759,7 @@ Some pipelines are disabled by default. To enable them:
    ```json
    {
        "flow_name": "base",
-       "pipelines": ["similarity", "regex", "ml"]
+       "pipelines": ["similarity", "rule", "ml"]
    }
    ```
 
@@ -819,7 +825,7 @@ PIPELINES_MAP = {
         "pipelines": [
             "personal_info",
             "similarity",
-            "regex",
+            "rule",
             "my_pipeline"
         ]
     }
@@ -846,7 +852,7 @@ class PipelineNames(str, Enum):
 
 2. **Create similarity index**
    ```bash
-   python app/pipelines/similarity_pipeline/index_script.py
+   python app/scripts/similarity/index_script.py
    ```
    
    This will create the `similarity-prompt-index` index in OpenSearch. You can customize the index name by setting the SIMILARITY_PROMPT_INDEX environment variable.
@@ -861,7 +867,7 @@ class PipelineNames(str, Enum):
 
 2. **Create similarity index**
    ```bash
-   python app/pipelines/similarity_pipeline/index_script.py
+   python app/scripts/similarity/index_script.py
    ```
    
    This will create the `similarity-prompt-index` index in Elasticsearch. You can customize the index name by setting the SIMILARITY_PROMPT_INDEX environment variable.
