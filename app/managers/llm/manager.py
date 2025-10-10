@@ -23,6 +23,7 @@ class LLMManager(BaseManager[BaseLLMClient]):
         _active_client (Optional[BaseSearchClient]): Currently active client for operations
         _active_client_id (str): Identifier of the active client
     """
+
     _identifier: ManagerNames = ManagerNames.llm
     description = "Manager class for LLM operations using AI language models."
 
@@ -40,6 +41,23 @@ class LLMManager(BaseManager[BaseLLMClient]):
 
     def __str__(self) -> str:
         return "LLM Manager"
+
+    async def _check_connections(self) -> None:
+        """
+        Checks connections for all initialized clients.
+        Connection checks are deferred until the first async operation.
+        """
+        bastion_logger.debug("Checking connections for all initialized clients")
+        for client in self._clients_map.values():
+            try:
+                status = await client.check_connection()
+                if status:
+                    client.enabled = True
+                    bastion_logger.info(f"[{self}][{client}] Connection check successful")
+                else:
+                    bastion_logger.error(f"[{self}][{client}] Check connection failed")
+            except Exception as e:
+                bastion_logger.error(f"{str(e)}")
 
     async def run(self, text: str) -> PipelineResult:
         """

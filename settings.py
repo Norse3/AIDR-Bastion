@@ -17,8 +17,8 @@ class BaseSearchSettings(BaseModel):
     Provides common configuration structure for Elasticsearch and OpenSearch clients.
     """
 
-    user: str
-    password: str
+    user: Optional[str] = None
+    password: Optional[str] = None
     host: str
     port: int
     scheme: str = "https"
@@ -31,16 +31,18 @@ class BaseSearchSettings(BaseModel):
         Returns:
             dict: Common configuration dictionary
         """
-        return {
+        config = {
             "hosts": [f"{self.scheme}://{self.host}:{self.port}"],
-            "http_auth": (self.user, self.password),
             "verify_certs": False,
             "ssl_show_warn": False,
             "retry_on_status": (500, 502, 503, 504),
-            "retry_on_timeout": True,
-            "timeout": 30,
             "max_retries": 3,
         }
+
+        if self.user and self.password:
+            config["basic_auth"] = (self.user, self.password)
+
+        return config
 
 
 class OpenSearchSettings(BaseSearchSettings):
@@ -53,10 +55,15 @@ class OpenSearchSettings(BaseSearchSettings):
 
 class ElasticsearchSettings(BaseSearchSettings):
     def get_client_config(self) -> dict:
-        return {
-            **self.get_common_config(),
-            "maxsize": self.pool_size,
+        config = {
+            "hosts": [f"{self.scheme}://{self.host}:{self.port}"],
         }
+
+        # Add authentication only if both user and password are provided
+        if self.user and self.password:
+            config["basic_auth"] = (self.user, self.password)
+
+        return config
 
 
 class KafkaSettings(BaseModel):

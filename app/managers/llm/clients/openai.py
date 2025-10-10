@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from openai import AsyncOpenAI
 
@@ -66,7 +67,7 @@ Return only a JSON object in the following format:
     def __str__(self) -> str:
         return "OpenAI Client"
 
-    async def check_connection(self) -> None:
+    async def check_connection(self) -> None | Any:
         """
         Checks connection to OpenAI API.
 
@@ -75,7 +76,11 @@ Return only a JSON object in the following format:
         """
         try:
             # Simple test request to check API connectivity
-            await self.client.models.list()
+            status = await self.client.models.list()
+            if status:
+                self.enabled = True
+                bastion_logger.info(f"[{self}] Connection check successful")
+            return status
         except Exception as e:
             raise Exception(f"Failed to connect to OpenAI API: {e}")
 

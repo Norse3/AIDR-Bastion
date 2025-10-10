@@ -24,7 +24,6 @@ class BaseManager(ABC, Generic[T]):
         _active_client (Optional[T]): Currently active client for operations
         _active_client_id (Optional[str]): Identifier of the active client
     """
-    _identifier: str = "base"
 
     def __init__(self, clients_map: Dict[str, type], default_client_setting: str) -> None:
         """
@@ -40,7 +39,6 @@ class BaseManager(ABC, Generic[T]):
         self._default_client_setting = default_client_setting
 
         self._initialize_clients(clients_map)
-        self._set_active_client()
 
     def __str__(self) -> str:
         """
@@ -77,6 +75,21 @@ class BaseManager(ABC, Generic[T]):
             except Exception as e:
                 bastion_logger.error(f"[{client_class._identifier}] Failed to initialize. Error: {e}")
 
+    @property
+    async def _activate_clients(self) -> None:
+        """
+        Activates all initialized clients.
+        """
+        await self._check_connections()
+        self._set_active_client()
+
+    @abstractmethod
+    async def _check_connections(self) -> None:
+        """
+        Checks connections for all initialized clients.
+        """
+        pass
+
     def _set_active_client(self, client_id: str = None) -> None:
         """
         Sets the active client based on provided client_id or default setting.
@@ -88,6 +101,9 @@ class BaseManager(ABC, Generic[T]):
             client_id = getattr(settings, self._default_client_setting, None)
 
         if client := self._clients_map.get(client_id):
+            if client.enabled is False:
+                bastion_logger.warning(f"[{self}][{client}] Client is not enabled. Check configuration.")
+                return
             self._active_client = client
             self._active_client_id = client_id
             bastion_logger.info(f"[{self}][{client}] Set as active client")

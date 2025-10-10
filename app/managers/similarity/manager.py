@@ -1,10 +1,11 @@
-from app.core.enums import ActionStatus
+from typing import Any, Dict
+
+from app.core.enums import ActionStatus, ManagerNames
 from app.core.manager import BaseManager
 from app.managers.similarity.clients import ALL_CLIENTS_MAP
 from app.managers.similarity.clients.base import BaseSearchClient
 from app.models.pipeline import PipelineResult
 from app.modules.logger import bastion_logger
-from app.core.enums import ManagerNames
 from settings import get_settings
 
 settings = get_settings()
@@ -39,25 +40,42 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
         3. None (if neither available)
         """
         super().__init__(ALL_CLIENTS_MAP, "SIMILARITY_DEFAULT_CLIENT")
-        self._check_connections()
 
     def __str__(self) -> str:
         return "Similarity Manager"
 
-    def _check_connections(self) -> None:
+    async def _check_connections(self) -> None:
         """
         Checks connections for all initialized clients.
         Connection checks are deferred until the first async operation.
         """
-        import asyncio
         bastion_logger.debug("Checking connections for all initialized clients")
-        loop = asyncio.get_event_loop()
         for client in self._clients_map.values():
             try:
-                loop.create_task(client.check_connection())
+                status = await client.check_connection()
+                if status:
+                    client.enabled = True
+                    bastion_logger.info(f"[{self}][{client}] Connection check successful")
+                else:
+                    bastion_logger.error(f"[{self}][{client}] Check connection failed")
             except Exception as e:
-                bastion_logger.error(f"Failed to check connection for {client}: {e}")
-        bastion_logger.debug("Connection checks deferred until first async operation")
+                bastion_logger.error(f"{str(e)}")
+
+    @property
+    def index_name(self) -> str:
+        return self._active_client.similarity_prompt_index
+
+    async def index_exists(self) -> bool:
+        if not self._active_client:
+            bastion_logger.error("No active client available")
+            return False
+        return await self._active_client._index_exists(self.index_name)
+
+    async def index(self, body: Dict[str, Any]) -> bool:
+        return await self._active_client.index(body)
+
+    async def index_create(self) -> bool:
+        return await self._active_client.index_create()
 
     async def run(self, text: str) -> PipelineResult:
         """
@@ -83,8 +101,6 @@ class SimilarityManager(BaseManager[BaseSearchClient]):
             )
 
         try:
-            # Check connection before running
-            await self._active_client.check_connection()
             return await self._active_client.run(text=text)
         except Exception as e:
             msg = f"Error during similarity search with {self._active_client_id}: {e}"

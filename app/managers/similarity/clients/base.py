@@ -8,6 +8,7 @@ from app.models.pipeline import PipelineResult, TriggeredRuleData
 from app.modules.logger import bastion_logger
 from app.utils import text_embedding, split_text_into_sentences
 from settings import get_settings
+from scripts.similarity.const import INDEX_MAPPING
 
 
 settings = get_settings()
@@ -27,6 +28,7 @@ class BaseSearchClient(ABC):
     """
 
     _identifier: str | None = None
+    enabled: bool = False
 
     def __init__(self, similarity_prompt_index: str, search_settings: Any) -> None:
         """
@@ -80,7 +82,7 @@ class BaseSearchClient(ABC):
         """
         pass
 
-    async def check_connection(self) -> None:
+    async def check_connection(self) -> bool:
         """
         Establishes connection with search system server.
 
@@ -91,15 +93,16 @@ class BaseSearchClient(ABC):
             Exception: On failed connection or search system error
         """
         if not self._search_settings:
-            return
+            return False
         try:
             is_connected = await self._ping()
             if not is_connected:
-                raise Exception(f"Failed to connect to {self}. Ping failed.")
-            if not await self._index_exists(self.similarity_prompt_index):
-                raise Exception(f"Index `{self.similarity_prompt_index}` does not exist.")
+                raise Exception(f"[{self}] Failed to connect to {self}. Ping failed.")
+            # if not await self._index_exists(self.similarity_prompt_index):
+            #     raise Exception(f"[{self}] Index `{self.similarity_prompt_index}` does not exist.")
+            return True
         except Exception as e:
-            raise ConfigurationException(f"{self} validation failed. Error: {str(e)}")
+            raise ConfigurationException(f"{str(e)}")
 
     async def close(self) -> None:
         """
@@ -118,6 +121,16 @@ class BaseSearchClient(ABC):
         except Exception as e:
             error_msg = f"Failed to close pool of connections to {self}. Error: {e}"
             bastion_logger.exception(f"[{self._search_settings.host}] {error_msg}")
+
+    async def index(self, body: Dict[str, Any]) -> bool:
+        """
+        Creates index.
+        """
+        try:
+            return await self._client.index(index=self.similarity_prompt_index, body=body)
+        except Exception as e:
+            bastion_logger.error(f"[{self}][{self._search_settings.host}][{self.similarity_prompt_index}] Failed to create index: {e}")
+            return False
 
     async def _search(self, index: str, body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -330,3 +343,15 @@ class BaseSearchClientMethods(BaseSearchClient):
         return PipelineResult(
             name=str(self), status=self._pipeline_status(triggered_rules), triggered_rules=triggered_rules
         )
+
+    async def index_create(self) -> bool:
+        """
+        Creates index.
+        """
+        try:
+            return await self._client.indices.create(
+                index=self.similarity_prompt_index, body=INDEX_MAPPING
+            )
+        except Exception as e:
+            bastion_logger.error(f"[{self}][{self._search_settings.host}][{self.similarity_prompt_index}] Failed to create index: {e}")
+            return False

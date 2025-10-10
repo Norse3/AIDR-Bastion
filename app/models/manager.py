@@ -1,14 +1,15 @@
 from pydantic import BaseModel
+from app.core.enums import ManagerNames, LLMClientNames, SimilarityClientNames
 
 
 class ClientInfo(BaseModel):
-    id: str
+    id: LLMClientNames | SimilarityClientNames
     name: str
     description: str
 
 
 class ManagerInfo(BaseModel):
-    id: str
+    id: ManagerNames
     name: str
     enabled: bool
     clients: list[ClientInfo]
@@ -19,10 +20,10 @@ class ManagersListResponse(BaseModel):
 
 
 class SwitchActiveClientRequest(BaseModel):
-    manager_id: str
-    client_id: str
+    manager_id: ManagerNames
+    client_id: LLMClientNames | SimilarityClientNames
 
 
 class SwitchActiveClientResponse(BaseModel):
     status: bool
-    client_id: str
+    client_id: LLMClientNames | SimilarityClientNames

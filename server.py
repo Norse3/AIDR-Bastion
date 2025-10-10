@@ -15,6 +15,8 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
+    for manager in ALL_MANAGERS_MAP.values():
+        await manager._activate_clients()
     yield
     for manager in ALL_MANAGERS_MAP.values():
         await manager.close_connections()
