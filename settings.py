@@ -147,6 +147,16 @@ class Settings(BaseSettings):
         default="https://api.anthropic.com", description="Default base URL for Anthropic Claude API"
     )
 
+    # Azure OpenAI Configuration
+    AZURE_OPENAI_ENDPOINT: Optional[str] = Field(default="", description="Azure OpenAI endpoint URL")
+    AZURE_OPENAI_API_KEY: Optional[str] = Field(default="", description="Azure OpenAI API key")
+    AZURE_OPENAI_DEPLOYMENT: Optional[str] = Field(
+        default="gpt-4", description="Azure OpenAI deployment/model name"
+    )
+    AZURE_OPENAI_API_VERSION: Optional[str] = Field(
+        default="2024-02-15-preview", description="Azure OpenAI API version"
+    )
+
     ML_MODEL_PATH: Optional[str] = None
 
 

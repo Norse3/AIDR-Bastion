@@ -83,7 +83,8 @@ Inspired by LlamaFirewall.
 - OpenSearch or Elasticsearch (optional, for Similarity Pipeline)
 - LLM API key (optional, for LLM Pipeline):
   - OpenAI API key for GPT models, or
-  - Anthropic API key for Claude models
+  - Anthropic API key for Claude models, or
+  - Azure OpenAI credentials for enterprise deployments
 
 ### Quick Start
 
@@ -132,7 +133,7 @@ PORT=8000
 ML_MODEL_PATH=
 
 # LLM Pipeline
-LLM_DEFAULT_CLIENT=openai  # openai or anthropic
+LLM_DEFAULT_CLIENT=openai  # openai, anthropic, or azure
 
 # OpenAI Configuration
 OPENAI_API_KEY=
@@ -144,6 +145,12 @@ ANTHROPIC_API_KEY=
 ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 ANTHROPIC_BASE_URL=https://api.anthropic.com
 
+# Azure OpenAI Configuration
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=
+AZURE_OPENAI_DEPLOYMENT=gpt-4
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
 # Similarity Pipeline
 # similarity-prompt-index by default
 SIMILARITY_PROMPT_INDEX=
@@ -153,7 +160,7 @@ SIMILARITY_BLOCK_THRESHOLD=0.87
 
 # Manager configuration
 SIMILARITY_DEFAULT_CLIENT=opensearch  # opensearch or elasticsearch
-LLM_DEFAULT_CLIENT=openai  # openai or anthropic
+LLM_DEFAULT_CLIENT=openai  # openai, anthropic, or azure
 
 # OpenSearch configuration
 OS__HOST=
@@ -512,6 +519,7 @@ Switch the active client for a specific manager.
 - **Supported Providers**:
   - **OpenAI** - GPT-4, GPT-4 Turbo models
   - **Anthropic** - Claude 3.5 Sonnet, Claude 3 Opus models
+  - **Azure OpenAI** - Enterprise GPT models via Microsoft Azure infrastructure
 - **Configuration**: `LLM_DEFAULT_CLIENT`, provider-specific API keys and settings
 - **Features**: JSON response format, configurable models, intelligent decision-making, multi-provider support
 - **Response Format**: Returns structured JSON with status (block/notify/allow) and reasoning
@@ -545,6 +553,7 @@ Manages LLM providers for text analysis and classification. Provides unified int
 **Available clients:**
 - **OpenAI Client** - GPT-4, GPT-4 Turbo models support
 - **Anthropic Client** - Claude 3.5 Sonnet, Claude 3 Opus models support
+- **Azure OpenAI Client** - Enterprise GPT models via Microsoft Azure infrastructure
 
 Use the `LLM_DEFAULT_CLIENT` environment variable to set the default client.
 The endpoint `/api/v1/manager/switch_active_client` allows dynamic switching between providers.
@@ -562,10 +571,16 @@ requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json=
     "manager_id": "llm",
     "client_id": "openai"
 })
+
+# Switch to Azure OpenAI
+requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json={
+    "manager_id": "llm",
+    "client_id": "azure"
+})
 ```
 
 **Clients in development:**
-- Planned support for other LLM providers (Azure OpenAI, Google Gemini, Ollama, Groq, Mistral)
+- Planned support for other LLM providers (Google Gemini, Ollama, Groq, Mistral)
 - You can contribute clients
 
 ## 📋 Rule Management and Customization
@@ -798,6 +813,24 @@ Some pipelines are disabled by default. To enable them:
    }
    ```
 
+### Enable LLM Pipeline with Azure OpenAI
+1. Configure your Azure OpenAI credentials in the .env configuration file:
+   ```bash
+   LLM_DEFAULT_CLIENT=azure
+   AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+   AZURE_OPENAI_API_KEY=your-api-key
+   AZURE_OPENAI_DEPLOYMENT=gpt-4
+   AZURE_OPENAI_API_VERSION=2024-02-15-preview
+   ```
+
+2. Add to your flow in `config.json`:
+   ```json
+   {
+       "flow_name": "base",
+       "pipelines": ["similarity", "rule", "llm"]
+   }
+   ```
+
 3. Switch between providers dynamically via API:
    ```python
    # Switch to Anthropic
@@ -807,6 +840,10 @@ Some pipelines are disabled by default. To enable them:
    # Switch to OpenAI
    requests.post("http://localhost:8000/api/v1/manager/switch_active_client",
        json={"manager_id": "llm", "client_id": "openai"})
+
+   # Switch to Azure OpenAI
+   requests.post("http://localhost:8000/api/v1/manager/switch_active_client",
+       json={"manager_id": "llm", "client_id": "azure"})
    ```
 
 ### Enable ML Pipeline
@@ -1037,6 +1074,7 @@ This project is built using the following powerful open-source libraries and fra
 - **[Elasticsearch](https://www.elastic.co/elasticsearch/)** - Open search and analytics platform for various data types
 - **[OpenAI](https://openai.com/)** - AI research company providing powerful language models (GPT-4, GPT-4 Turbo) for intelligent content analysis
 - **[Anthropic](https://www.anthropic.com/)** - AI safety company providing Claude models (Claude 3.5 Sonnet, Claude 3 Opus) for advanced reasoning and content moderation
+- **[Azure OpenAI](https://azure.microsoft.com/en-us/products/ai-services/openai-service)** - Enterprise-grade OpenAI models via Microsoft Azure infrastructure with enhanced security and compliance
 - **[Semgrep](https://semgrep.dev/)** - Static analysis tool for finding bugs and security issues in code
 - **[Sentence Transformers](https://www.sbert.net/)** - Python framework for state-of-the-art sentence, text and image embeddings
 - **[Pydantic](https://pydantic-docs.helpmanual.io/)** - Data validation and settings management using Python type annotations
