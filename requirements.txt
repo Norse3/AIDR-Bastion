@@ -7,6 +7,7 @@ PyYAML==6.0.2
 openai==2.0.0
 opensearch-py[async]==2.8.0
 elasticsearch>=8.0.0
+qdrant-client>=1.7.0
 semgrep==1.122.0
 einops==0.8.1
 nltk>=3.9
