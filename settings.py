@@ -157,6 +157,12 @@ class Settings(BaseSettings):
         default="2024-02-15-preview", description="Azure OpenAI API version"
     )
 
+    # Ollama Configuration
+    OLLAMA_BASE_URL: Optional[str] = Field(
+        default="http://localhost:11434/v1", description="Ollama API base URL"
+    )
+    OLLAMA_MODEL: Optional[str] = Field(default="llama3", description="Ollama model name")
+
     ML_MODEL_PATH: Optional[str] = None
 
 
