@@ -58,8 +58,9 @@ class AsyncQdrantClientWrapper(BaseSearchClientMethods):
             bool: True if service is healthy, False otherwise
         """
         try:
-            health = await self._client.health()
-            return health is not None
+            # Use get_collections() as a health check since AsyncQdrantClient doesn't have health() method
+            await self._client.get_collections()
+            return True
         except Exception as e:
             bastion_logger.error(f"[{self._search_settings.host}] Ping failed: {e}")
             return False
