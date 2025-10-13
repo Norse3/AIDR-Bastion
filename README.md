@@ -80,8 +80,10 @@ Inspired by LlamaFirewall.
 ### Prerequisites
 
 - Python 3.12+
-- OpenSearch or Elasticsearch (via Similarity Manager)
-- OpenAI API key (for LLM Pipeline)
+- OpenSearch or Elasticsearch (optional, for Similarity Pipeline)
+- LLM API key (optional, for LLM Pipeline):
+  - OpenAI API key for GPT models, or
+  - Anthropic API key for Claude models
 
 ### Quick Start
 
@@ -130,10 +132,17 @@ PORT=8000
 ML_MODEL_PATH=
 
 # LLM Pipeline
-# model by default gpt-4
+LLM_DEFAULT_CLIENT=openai  # openai or anthropic
+
+# OpenAI Configuration
 OPENAI_API_KEY=
-OPENAI_MODEL=
-OPENAI_BASE_URL=
+OPENAI_MODEL=gpt-4
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# Anthropic Configuration
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+ANTHROPIC_BASE_URL=https://api.anthropic.com
 
 # Similarity Pipeline
 # similarity-prompt-index by default
@@ -144,7 +153,7 @@ SIMILARITY_BLOCK_THRESHOLD=0.87
 
 # Manager configuration
 SIMILARITY_DEFAULT_CLIENT=opensearch  # opensearch or elasticsearch
-LLM_DEFAULT_CLIENT=openai
+LLM_DEFAULT_CLIENT=openai  # openai or anthropic
 
 # OpenSearch configuration
 OS__HOST=
@@ -497,13 +506,16 @@ Switch the active client for a specific manager.
 - **Best for**: General malicious content detection
 - **Required**: Configured environment `EMBEDDINGS_MODEL`
 
-### 5. LLM Pipeline (`openai`)
-- **Purpose**: AI-powered analysis using OpenAI GPT models
+### 5. LLM Pipeline (`llm`)
+- **Purpose**: AI-powered analysis using advanced language models
 - **Backend**: Uses [LLM Manager](#llm-manager) for text analysis
-- **Configuration**: `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `LLM_DEFAULT_CLIENT`
-- **Features**: JSON response format, configurable models, intelligent decision-making
+- **Supported Providers**:
+  - **OpenAI** - GPT-4, GPT-4 Turbo models
+  - **Anthropic** - Claude 3.5 Sonnet, Claude 3 Opus models
+- **Configuration**: `LLM_DEFAULT_CLIENT`, provider-specific API keys and settings
+- **Features**: JSON response format, configurable models, intelligent decision-making, multi-provider support
 - **Response Format**: Returns structured JSON with status (block/notify/allow) and reasoning
-- **Best for**: Complex reasoning and context-aware analysis
+- **Best for**: Complex reasoning, context-aware analysis, and nuanced content moderation
 
 ## 👥 Managers
 
@@ -528,16 +540,32 @@ The endpoint `/api/v1/manager/switch_active_client` also allows this.
 - You can contribute clients
 
 ### LLM Manager
-Manages LLM providers for text analysis and classification.
+Manages LLM providers for text analysis and classification. Provides unified interface for multiple AI providers with dynamic client switching.
 
 **Available clients:**
-- **OpenAI Client** - GPT models support
+- **OpenAI Client** - GPT-4, GPT-4 Turbo models support
+- **Anthropic Client** - Claude 3.5 Sonnet, Claude 3 Opus models support
 
-Use the LLM_DEFAULT_CLIENT environment variable to set the default client.
-The endpoint `/api/v1/manager/switch_active_client` also allows this.
+Use the `LLM_DEFAULT_CLIENT` environment variable to set the default client.
+The endpoint `/api/v1/manager/switch_active_client` allows dynamic switching between providers.
+
+**Example switching between providers:**
+```python
+# Switch to Anthropic Claude
+requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json={
+    "manager_id": "llm",
+    "client_id": "anthropic"
+})
+
+# Switch to OpenAI GPT
+requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json={
+    "manager_id": "llm",
+    "client_id": "openai"
+})
+```
 
 **Clients in development:**
-- Planned support for other LLM providers (Anthropic, Google, local models)
+- Planned support for other LLM providers (Azure OpenAI, Google Gemini, Ollama, Groq, Mistral)
 - You can contribute clients
 
 ## 📋 Rule Management and Customization
@@ -728,27 +756,57 @@ rules:
 # Priority for Similarity Manager
 SIMILARITY_DEFAULT_CLIENT=opensearch  # or elasticsearch
 
-# Priority for LLM Manager  
-LLM_DEFAULT_CLIENT=openai
+# Priority for LLM Manager
+LLM_DEFAULT_CLIENT=openai  # openai or anthropic
 ```
 
 ## ⚙️ Enabling Disabled Pipeline
 
 Some pipelines are disabled by default. To enable them:
 
-### Enable OpenAI Pipeline
+### Enable LLM Pipeline with OpenAI
 1. Configure your OpenAI API key in the .env configuration file:
    ```bash
+   LLM_DEFAULT_CLIENT=openai
    OPENAI_API_KEY=your-api-key
    OPENAI_MODEL=gpt-4
+   OPENAI_BASE_URL=https://api.openai.com/v1
    ```
 
 2. Add to your flow in `config.json`:
    ```json
    {
        "flow_name": "base",
-       "pipelines": ["similarity", "rule", "openai"]
+       "pipelines": ["similarity", "rule", "llm"]
    }
+   ```
+
+### Enable LLM Pipeline with Anthropic Claude
+1. Configure your Anthropic API key in the .env configuration file:
+   ```bash
+   LLM_DEFAULT_CLIENT=anthropic
+   ANTHROPIC_API_KEY=your-api-key
+   ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+   ANTHROPIC_BASE_URL=https://api.anthropic.com
+   ```
+
+2. Add to your flow in `config.json`:
+   ```json
+   {
+       "flow_name": "base",
+       "pipelines": ["similarity", "rule", "llm"]
+   }
+   ```
+
+3. Switch between providers dynamically via API:
+   ```python
+   # Switch to Anthropic
+   requests.post("http://localhost:8000/api/v1/manager/switch_active_client",
+       json={"manager_id": "llm", "client_id": "anthropic"})
+
+   # Switch to OpenAI
+   requests.post("http://localhost:8000/api/v1/manager/switch_active_client",
+       json={"manager_id": "llm", "client_id": "openai"})
    ```
 
 ### Enable ML Pipeline
@@ -972,12 +1030,13 @@ For more information about LGPL, visit: https://www.gnu.org/licenses/lgpl-3.0.ht
 
 This project is built using the following powerful open-source libraries and frameworks:
 
-- **[Roota](https://github.com/UncoderIO/Roota)**: Public-domain language for collective cyber defense
-- **[Uncoder AI](https://tdm.socprime.com/uncoder-ai/)**: Convert Roota/Sigma rules to Semgrep format
+- **[Roota](https://github.com/UncoderIO/Roota)** - Public-domain language for collective cyber defense
+- **[Uncoder AI](https://tdm.socprime.com/uncoder-ai/)** - Convert Roota/Sigma rules to Semgrep format
 - **[FastAPI](https://fastapi.tiangolo.com/)** - Modern, fast web framework for building APIs with Python 3.7+ based on standard Python type hints
 - **[OpenSearch](https://opensearch.org/)** - Open source search and analytics suite for log analytics, application search, and more
 - **[Elasticsearch](https://www.elastic.co/elasticsearch/)** - Open search and analytics platform for various data types
-- **[OpenAI](https://openai.com/)** - AI research company providing powerful language models for intelligent content analysis
+- **[OpenAI](https://openai.com/)** - AI research company providing powerful language models (GPT-4, GPT-4 Turbo) for intelligent content analysis
+- **[Anthropic](https://www.anthropic.com/)** - AI safety company providing Claude models (Claude 3.5 Sonnet, Claude 3 Opus) for advanced reasoning and content moderation
 - **[Semgrep](https://semgrep.dev/)** - Static analysis tool for finding bugs and security issues in code
 - **[Sentence Transformers](https://www.sbert.net/)** - Python framework for state-of-the-art sentence, text and image embeddings
 - **[Pydantic](https://pydantic-docs.helpmanual.io/)** - Data validation and settings management using Python type annotations

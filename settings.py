@@ -130,10 +130,21 @@ class Settings(BaseSettings):
     )
 
     LLM_DEFAULT_CLIENT: Optional[str] = Field(default="openai", description="Default client for LLM")
+
+    # OpenAI Configuration
     OPENAI_API_KEY: Optional[str] = Field(default="", description="API key for OpenAI ChatGPT API")
     OPENAI_MODEL: Optional[str] = Field(default="gpt-4", description="Default model for OpenAI ChatGPT API")
     OPENAI_BASE_URL: Optional[str] = Field(
         default="https://api.openai.com/v1", description="Default base URL for OpenAI ChatGPT API"
+    )
+
+    # Anthropic Configuration
+    ANTHROPIC_API_KEY: Optional[str] = Field(default="", description="API key for Anthropic Claude API")
+    ANTHROPIC_MODEL: Optional[str] = Field(
+        default="claude-sonnet-4-5-20250929", description="Default model for Anthropic Claude API"
+    )
+    ANTHROPIC_BASE_URL: Optional[str] = Field(
+        default="https://api.anthropic.com", description="Default base URL for Anthropic Claude API"
     )
 
     ML_MODEL_PATH: Optional[str] = None
