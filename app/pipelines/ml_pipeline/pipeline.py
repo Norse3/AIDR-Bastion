@@ -97,11 +97,13 @@ class MLPipeline(BasePipeline):
         """
         trigger_rules = []
         bastion_logger.info(f"Analyzing for {self._identifier}")
+        status = ActionStatus.ALLOW
         if self.validate_prompt(prompt):
             msg = "ML Pipeline detected malicious prompt"
+            status = ActionStatus.BLOCK
             trigger_rules.append(
                 TriggeredRuleData(id=self._identifier, name=str(self), details=msg, action=RuleAction.BLOCK)
             )
-            bastion_logger.info(f"Analyzing for {self._identifier}, status: {ActionStatus.BLOCK}, details: {msg}")
+            bastion_logger.info(f"Analyzing for {self._identifier}, status: {status}, details: {msg}")
         bastion_logger.info(f"Analyzing done for {self._identifier}")
-        return PipelineResult(name=str(self), triggered_rules=trigger_rules)
+        return PipelineResult(name=str(self), triggered_rules=trigger_rules, status=status)

@@ -153,8 +153,12 @@ AZURE_OPENAI_DEPLOYMENT=gpt-4
 AZURE_OPENAI_API_VERSION=2024-02-15-preview
 
 # Ollama Configuration (for local LLM models)
-OLLAMA_BASE_URL=http://localhost:11434/v1
+OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3
+
+# LLM Common Configuration (applies to all LLM providers)
+LLM_TEMPERATURE=0.1  # Temperature for LLM responses (0.0-2.0, lower = more focused)
+LLM_MAX_TOKENS=1000  # Maximum tokens for LLM responses
 
 # Similarity Pipeline
 # similarity-prompt-index by default
@@ -526,7 +530,11 @@ Switch the active client for a specific manager.
   - **Anthropic** - Claude 3.5 Sonnet, Claude 3 Opus models
   - **Azure OpenAI** - Enterprise GPT models via Microsoft Azure infrastructure
   - **Ollama** - Local LLM models (Llama 3, Mistral, Gemma, etc.) for privacy-focused deployments
-- **Configuration**: `LLM_DEFAULT_CLIENT`, provider-specific API keys and settings
+- **Configuration**:
+  - `LLM_DEFAULT_CLIENT` - Choose provider (openai, anthropic, azure, ollama)
+  - `LLM_TEMPERATURE` - Control response randomness (0.0-2.0, default: 0.1)
+  - `LLM_MAX_TOKENS` - Maximum response length (default: 1000)
+  - Provider-specific API keys and settings
 - **Features**: JSON response format, configurable models, intelligent decision-making, multi-provider support
 - **Response Format**: Returns structured JSON with status (block/notify/allow) and reasoning
 - **Best for**: Complex reasoning, context-aware analysis, and nuanced content moderation
@@ -799,6 +807,10 @@ Some pipelines are disabled by default. To enable them:
    OPENAI_API_KEY=your-api-key
    OPENAI_MODEL=gpt-4
    OPENAI_BASE_URL=https://api.openai.com/v1
+
+   # Optional: LLM Common Configuration (applies to all providers)
+   LLM_TEMPERATURE=0.1  # Lower = more focused, higher = more creative
+   LLM_MAX_TOKENS=1000  # Maximum response length
    ```
 
 2. Add to your flow in `config.json`:
@@ -816,6 +828,10 @@ Some pipelines are disabled by default. To enable them:
    ANTHROPIC_API_KEY=your-api-key
    ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
    ANTHROPIC_BASE_URL=https://api.anthropic.com
+
+   # Optional: LLM Common Configuration (applies to all providers)
+   LLM_TEMPERATURE=0.1  # Lower = more focused, higher = more creative
+   LLM_MAX_TOKENS=1000  # Maximum response length
    ```
 
 2. Add to your flow in `config.json`:
@@ -834,6 +850,10 @@ Some pipelines are disabled by default. To enable them:
    AZURE_OPENAI_API_KEY=your-api-key
    AZURE_OPENAI_DEPLOYMENT=gpt-4
    AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
+   # Optional: LLM Common Configuration (applies to all providers)
+   LLM_TEMPERATURE=0.1  # Lower = more focused, higher = more creative
+   LLM_MAX_TOKENS=1000  # Maximum response length
    ```
 
 2. Add to your flow in `config.json`:
@@ -857,8 +877,12 @@ Some pipelines are disabled by default. To enable them:
 2. Configure Ollama in the .env configuration file:
    ```bash
    LLM_DEFAULT_CLIENT=ollama
-   OLLAMA_BASE_URL=http://localhost:11434/v1
+   OLLAMA_BASE_URL=http://localhost:11434
    OLLAMA_MODEL=llama3
+
+   # Optional: LLM Common Configuration (applies to all providers)
+   LLM_TEMPERATURE=0.1  # Lower = more focused, higher = more creative
+   LLM_MAX_TOKENS=1000  # Maximum response length
    ```
 
 3. Add to your flow in `config.json`:

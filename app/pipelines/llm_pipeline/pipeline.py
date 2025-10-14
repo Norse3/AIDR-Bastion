@@ -65,7 +65,7 @@ class LLMPipeline(BasePipeline):
             PipelineResult: Analysis result with triggered rules or None on error
         """
         try:
-            return await self.llm_manager.validate_input_text(prompt=prompt)
+            return await self.llm_manager.run(text=prompt)
         except Exception as err:
             bastion_logger.error(f"Error analyzing prompt, error={str(err)}")
             return PipelineResult(name=str(self), triggered_rules=[], status=ActionStatus.ERROR, details=str(err))

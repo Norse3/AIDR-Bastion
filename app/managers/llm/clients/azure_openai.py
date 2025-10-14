@@ -6,7 +6,7 @@ from openai import AsyncAzureOpenAI
 from app.core.enums import ActionStatus, LLMClientNames
 from app.core.exceptions import ConfigurationException
 from app.managers.llm.clients.base import BaseLLMClient
-from app.models.pipeline import PipelineResult, TriggeredRuleData
+from app.models.pipeline import PipelineResult
 from app.modules.logger import bastion_logger
 from settings import get_settings
 
@@ -30,27 +30,9 @@ class AsyncAzureOpenAIClient(BaseLLMClient):
 
     _client: AsyncAzureOpenAI
     _identifier: LLMClientNames = LLMClientNames.azure
-    description = "Azure OpenAI-based client for GPT models via Microsoft Azure infrastructure."
-
-    SYSTEM_PROMPT = """
-You are an AI prompt safety analyzer. Your task is to evaluate the given user text for potential risks, malicious intent, or policy violations.
-Focus on ethical concerns, harmful content, security risks, or attempts to misuse LLMs.
-
-### Decision Guidelines
-- "block": The text contains harmful, illegal, abusive, or disallowed content (e.g., malware creation, self-harm instructions, hate speech).
-- "notify": The text is suspicious, borderline, or requires human review.
-- "allow": The text is safe, appropriate, and does not raise ethical or security concerns.
-
-Be strict in blocking clearly harmful content, but do not overblock normal requests.
-
-### OUTPUT FORMAT
-Return only a JSON object in the following format:
-
-{
-    "status": "block" | "notify" | "allow",
-    "reason": "Clear explanation of why this decision was made"
-}
-"""
+    description = (
+        "Azure OpenAI-based client for GPT models via Microsoft Azure infrastructure."
+    )
 
     def __init__(self):
         """
@@ -59,10 +41,21 @@ Return only a JSON object in the following format:
         Sets up the Azure OpenAI API client with the provided endpoint, API key, and
         configures the model deployment for analysis.
         """
+        super().__init__()
         self.client = None
         model = settings.AZURE_OPENAI_DEPLOYMENT
         self.model = model
+        self.system_prompt = self._build_system_prompt()
         self.__load_client()
+
+    def _get_additional_instructions(self) -> str:
+        """
+        Get Azure OpenAI-specific additional instructions.
+
+        Returns:
+            str: Additional instructions for Azure OpenAI models
+        """
+        return """"""
 
     def __str__(self) -> str:
         return "Azure OpenAI Client"
@@ -103,26 +96,9 @@ Return only a JSON object in the following format:
             self.client = AsyncAzureOpenAI(**azure_settings)
             self.enabled = True
         except Exception as err:
-            raise Exception(f"[{self}][{self.model}] failed to load client. Error: {str(err)}")
-
-    def _load_response(self, response: str) -> str:
-        """
-        Parses JSON response from Azure OpenAI API.
-
-        Attempts to parse the JSON response from Azure OpenAI and returns
-        the parsed data. Logs errors if parsing fails.
-
-        Args:
-            response (str): JSON string response from Azure OpenAI
-
-        Returns:
-            Parsed JSON data or None on parsing error
-        """
-        try:
-            loaded_data = json.loads(response)
-            return loaded_data
-        except Exception as err:
-            bastion_logger.error(f"Error loading response, error={str(err)}")
+            raise Exception(
+                f"[{self}][{self.model}] failed to load client. Error: {str(err)}"
+            )
 
     async def run(self, text: str) -> PipelineResult:
         """
@@ -141,7 +117,10 @@ Return only a JSON object in the following format:
         messages = self._prepare_messages(text)
         try:
             response = await self.client.chat.completions.create(
-                model=self.model, messages=messages, temperature=0.1, max_tokens=1000
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
             )
             analysis = response.choices[0].message.content
             bastion_logger.info(f"Analysis: {analysis}")
@@ -153,54 +132,4 @@ Return only a JSON object in the following format:
                 "status": ActionStatus.ERROR,
                 "reason": msg,
             }
-            return self._process_response(error_data, text)
-
-    def _prepare_messages(self, text: str) -> list[dict]:
-        """
-        Prepares messages for Azure OpenAI API request.
-
-        Creates a conversation structure with system prompt and user input
-        for the Azure OpenAI chat completion API.
-
-        Args:
-            text (str): User input text to analyze
-
-        Returns:
-            list[dict]: List of message dictionaries for Azure OpenAI API
-        """
-        return [
-            {
-                "role": "system",
-                "content": self.SYSTEM_PROMPT,
-            },
-            {"role": "user", "content": text},
-        ]
-
-    def _process_response(self, analysis: str, original_text: str) -> PipelineResult:
-        """
-        Processes Azure OpenAI analysis response and creates an analysis result.
-
-        Parses the AI analysis response and creates appropriate triggered rules
-        based on the analysis status (block, notify, or allow).
-
-        Args:
-            analysis (str): JSON string response from Azure OpenAI analysis
-            original_text (str): Original prompt text that was analyzed
-
-        Returns:
-            PipelineResult: Processed analysis result with triggered rules and status
-        """
-        analysis = self._load_response(analysis)
-        triggered_rules = []
-        if analysis.get("status") in ("block", "notify"):
-            triggered_rules.append(
-                TriggeredRuleData(
-                    id=self._identifier,
-                    name=str(self),
-                    details=analysis.get("reason"),
-                    action=ActionStatus(analysis.get("status")),
-                )
-            )
-        status = ActionStatus(analysis.get("status"))
-        bastion_logger.info(f"Analyzing for {self._identifier}, status: {status}")
-        return PipelineResult(name=str(self), triggered_rules=triggered_rules, status=status)
+            return self._process_response(json.dumps(error_data), text)

@@ -43,7 +43,7 @@ def get_pipelines_from_config(configs: list[dict]) -> dict[str, list["BasePipeli
         Dictionary with categories and pipeline instances
     """
     # Import here to avoid circular imports
-    from app.pipelines import ENABLED_PIPELINES_MAP
+    from app.pipelines import PIPELINES_MAP
 
     result = {}
     skipped_pipelines = set()
@@ -52,12 +52,14 @@ def get_pipelines_from_config(configs: list[dict]) -> dict[str, list["BasePipeli
         flow_name = config.get("pipeline_flow")
         for pipeline_name in config.get("pipelines"):
             try:
-                pipelines.append(ENABLED_PIPELINES_MAP[pipeline_name])
+                pipeline = PIPELINES_MAP[pipeline_name]
+                # Pipelines will be enabled later through activation
+                pipelines.append(pipeline)
             except KeyError:
                 skipped_pipelines.add(pipeline_name)
         if flow_name and pipelines:
             result[flow_name] = pipelines
-    result["default"] = list(ENABLED_PIPELINES_MAP.values())
+    result["default"] = list(PIPELINES_MAP.values())
     if skipped_pipelines:
         bastion_logger.warning(f"Skipped pipelines: {', '.join(skipped_pipelines)}")
     return result

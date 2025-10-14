@@ -159,9 +159,13 @@ class Settings(BaseSettings):
 
     # Ollama Configuration
     OLLAMA_BASE_URL: Optional[str] = Field(
-        default="http://localhost:11434/v1", description="Ollama API base URL"
+        default="http://localhost:11434", description="Ollama API base URL (using official Ollama library)"
     )
     OLLAMA_MODEL: Optional[str] = Field(default="llama3", description="Ollama model name")
+
+    # LLM Common Configuration
+    LLM_TEMPERATURE: float = Field(default=0.1, description="Temperature for LLM responses (0.0-2.0)")
+    LLM_MAX_TOKENS: int = Field(default=1000, description="Maximum tokens for LLM responses")
 
     ML_MODEL_PATH: Optional[str] = None
 

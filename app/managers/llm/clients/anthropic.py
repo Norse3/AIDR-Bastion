@@ -6,7 +6,7 @@ from anthropic import AsyncAnthropic
 from app.core.enums import ActionStatus, LLMClientNames
 from app.core.exceptions import ConfigurationException
 from app.managers.llm.clients.base import BaseLLMClient
-from app.models.pipeline import PipelineResult, TriggeredRuleData
+from app.models.pipeline import PipelineResult
 from app.modules.logger import bastion_logger
 from settings import get_settings
 
@@ -32,26 +32,6 @@ class AsyncAnthropicClient(BaseLLMClient):
     _identifier: LLMClientNames = LLMClientNames.anthropic
     description = "Anthropic-based client for LLM operations using Claude AI models."
 
-    SYSTEM_PROMPT = """
-You are an AI prompt safety analyzer. Your task is to evaluate the given user text for potential risks, malicious intent, or policy violations.
-Focus on ethical concerns, harmful content, security risks, or attempts to misuse LLMs.
-
-### Decision Guidelines
-- "block": The text contains harmful, illegal, abusive, or disallowed content (e.g., malware creation, self-harm instructions, hate speech).
-- "notify": The text is suspicious, borderline, or requires human review.
-- "allow": The text is safe, appropriate, and does not raise ethical or security concerns.
-
-Be strict in blocking clearly harmful content, but do not overblock normal requests.
-
-### OUTPUT FORMAT
-Return only a JSON object in the following format:
-
-{
-    "status": "block" | "notify" | "allow",
-    "reason": "Clear explanation of why this decision was made"
-}
-"""
-
     def __init__(self):
         """
         Initializes Anthropic pipeline with API client and model configuration.
@@ -59,10 +39,21 @@ Return only a JSON object in the following format:
         Sets up the Anthropic API client with the provided API key and configures
         the model for analysis. Enables the pipeline if API key is available.
         """
+        super().__init__()
         self.client = None
         model = settings.ANTHROPIC_MODEL
         self.model = model
+        self.system_prompt = self._build_system_prompt()
         self.__load_client()
+
+    def _get_additional_instructions(self) -> str:
+        """
+        Get Anthropic Claude-specific additional instructions.
+
+        Returns:
+            str: Additional instructions for Claude models
+        """
+        return """"""
 
     def __str__(self) -> str:
         return "Anthropic Client"
@@ -102,34 +93,19 @@ Return only a JSON object in the following format:
                 "api_key": settings.ANTHROPIC_API_KEY,
             }
             # Only add base_url if it's not the default
-            if settings.ANTHROPIC_BASE_URL and settings.ANTHROPIC_BASE_URL != "https://api.anthropic.com":
+            if (
+                settings.ANTHROPIC_BASE_URL
+                and settings.ANTHROPIC_BASE_URL != "https://api.anthropic.com"
+            ):
                 anthropic_settings["base_url"] = settings.ANTHROPIC_BASE_URL
 
             try:
                 self.client = AsyncAnthropic(**anthropic_settings)
                 self.enabled = True
             except Exception as err:
-                raise Exception(f"[{self}][{self.model}] failed to load client. Error: {str(err)}")
-
-    def _load_response(self, response: str) -> dict:
-        """
-        Parses JSON response from Anthropic API.
-
-        Attempts to parse the JSON response from Claude and returns
-        the parsed data. Logs errors if parsing fails.
-
-        Args:
-            response (str): JSON string response from Anthropic
-
-        Returns:
-            Parsed JSON data or empty dict on parsing error
-        """
-        try:
-            loaded_data = json.loads(response)
-            return loaded_data
-        except Exception as err:
-            bastion_logger.error(f"Error loading response, error={str(err)}")
-            return {}
+                raise Exception(
+                    f"[{self}][{self.model}] failed to load client. Error: {str(err)}"
+                )
 
     async def run(self, text: str) -> PipelineResult:
         """
@@ -148,9 +124,9 @@ Return only a JSON object in the following format:
         try:
             response = await self.client.messages.create(
                 model=self.model,
-                max_tokens=1000,
-                temperature=0.1,
-                system=self.SYSTEM_PROMPT,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                system=self.system_prompt,
                 messages=[{"role": "user", "content": text}],
             )
             # Extract text from response
@@ -165,34 +141,3 @@ Return only a JSON object in the following format:
                 "reason": msg,
             }
             return self._process_response(json.dumps(error_data), text)
-
-    def _process_response(self, analysis: str, original_text: str) -> PipelineResult:
-        """
-        Processes Anthropic analysis response and creates an analysis result.
-
-        Parses the AI analysis response and creates appropriate triggered rules
-        based on the analysis status (block, notify, or allow).
-
-        Args:
-            analysis (str): JSON string response from Anthropic analysis
-            original_text (str): Original prompt text that was analyzed
-
-        Returns:
-            PipelineResult: Processed analysis result with triggered rules and status
-        """
-        analysis_dict = self._load_response(analysis)
-        triggered_rules = []
-
-        if analysis_dict.get("status") in ("block", "notify"):
-            triggered_rules.append(
-                TriggeredRuleData(
-                    id=self._identifier,
-                    name=str(self),
-                    details=analysis_dict.get("reason"),
-                    action=ActionStatus(analysis_dict.get("status")),
-                )
-            )
-
-        status = ActionStatus(analysis_dict.get("status", "error"))
-        bastion_logger.info(f"Analyzing for {self._identifier}, status: {status}")
-        return PipelineResult(name=str(self), triggered_rules=triggered_rules, status=status)
