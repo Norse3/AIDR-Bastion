@@ -32,7 +32,7 @@ Inspired by LlamaFirewall.
 ```
 ┌────────────────────────────────┐
 │   FastAPI Endpoint             │
-│   (POST /api/v1/run_pipeline)  │
+│   (POST /api/v1/flow/run)      │
 └──────────────┬─────────────────┘
                │
                ▼
