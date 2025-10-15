@@ -9,6 +9,7 @@ anthropic>=0.40.0
 ollama>=0.4.6
 opensearch-py[async]==2.8.0
 elasticsearch>=8.0.0
+qdrant-client>=1.7.0
 semgrep==1.122.0
 einops==0.8.1
 nltk>=3.9

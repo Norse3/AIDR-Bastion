@@ -48,6 +48,7 @@ class RuleAction(str, Enum):
 class SimilarityClientNames(str, Enum):
     opensearch = "opensearch"
     elasticsearch = "elasticsearch"
+    qdrant = "qdrant"
 
 
 class LLMClientNames(str, Enum):

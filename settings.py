@@ -66,6 +66,43 @@ class ElasticsearchSettings(BaseSearchSettings):
         return config
 
 
+class QdrantSettings(BaseModel):
+    """
+    Configuration settings for Qdrant vector database.
+
+    Qdrant is a specialized vector search engine optimized for similarity search.
+    """
+
+    host: str
+    port: int = 6333
+    grpc_port: Optional[int] = 6334
+    api_key: Optional[str] = None
+    prefer_grpc: bool = False
+    timeout: int = 30
+
+    def get_client_config(self) -> dict:
+        """
+        Returns configuration parameters for Qdrant client.
+
+        Returns:
+            dict: Qdrant client configuration dictionary
+        """
+        config = {
+            "host": self.host,
+            "port": self.port,
+            "timeout": self.timeout,
+            "prefer_grpc": self.prefer_grpc,
+        }
+
+        if self.grpc_port:
+            config["grpc_port"] = self.grpc_port
+
+        if self.api_key:
+            config["api_key"] = self.api_key
+
+        return config
+
+
 class KafkaSettings(BaseModel):
     bootstrap_servers: str
     topic: str
@@ -114,6 +151,7 @@ class Settings(BaseSettings):
 
     OS: Optional[OpenSearchSettings] = None
     ES: Optional[ElasticsearchSettings] = None
+    QDRANT: Optional[QdrantSettings] = None
     KAFKA: Optional[KafkaSettings] = None
     PIPELINE_CONFIG: dict = Field(default_factory=dict)
 
