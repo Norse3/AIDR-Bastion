@@ -32,7 +32,7 @@ Inspired by LlamaFirewall.
 ```
 ┌────────────────────────────────┐
 │   FastAPI Endpoint             │
-│   (POST /api/v1/run_pipeline)  │
+│   (POST /api/v1/flow/run)      │
 └──────────────┬─────────────────┘
                │
                ▼
@@ -358,7 +358,7 @@ All required environments you can find in env.example
 
 ## 📚 API Reference
 
-### POST /api/v1/run_pipeline
+### POST /api/v1/flow/run
 
 Runs pipelines to analyze the input prompt.
 
@@ -373,10 +373,10 @@ Runs pipelines to analyze the input prompt.
 **Response:**
 ```json
 {
-    "status": "allow" | "block" | "notify",
+    "status": "allow | block | notify",
     "result": [
         {
-            "status": "allow" | "block" | "notify",
+            "status": "allow | block | notify",
             "name": "string",
             "triggered_rules": [
                 {
@@ -394,7 +394,7 @@ Runs pipelines to analyze the input prompt.
 }
 ```
 
-### GET /api/v1/flows
+### GET /api/v1/flow/list
 
 Get a list of all available flows and their pipelines.
 
@@ -985,7 +985,7 @@ The environment variable `KAFKA__SAVE_PROMPT` is optional. It controls whether t
 	"service": "AIDR Bastion",
 	"version": "1.0.0",
 	"timestamp": "2025-09-24T14:39:50.351466",
-	"task_id": 1 // unique identifier passed through endpoint run_pipeline
+	"task_id": 1 // unique identifier passed through endpoint
 }
 ```
 
