@@ -23,7 +23,7 @@ Inspired by LlamaFirewall.
 - **Multi-Pipeline Detection**: Regex patterns, ML models, vector-based similarity detection, and LLM-based analysis
 - **Flexible Configuration**: Dynamic Pipeline configuration via JSON
 - **Real-time Analysis**: Fast async processing with configurable thresholds
-- **Client Managers**: Flexible client management (Elasticsearch, OpenSearch)
+- **Client Managers**: Flexible client management (Elasticsearch, OpenSearch, Qdrant)
 - **RESTful API**: Easy integration with existing applications
 - **Extensible Architecture**: Simple plugin system for custom Pipelines
 
@@ -80,7 +80,7 @@ Inspired by LlamaFirewall.
 ### Prerequisites
 
 - Python 3.12+
-- OpenSearch or Elasticsearch (via Similarity Manager)
+- OpenSearch, Elasticsearch, or Qdrant (via Similarity Manager)
 - OpenAI API key (for LLM Pipeline)
 
 ### Quick Start
@@ -143,7 +143,7 @@ SIMILARITY_NOTIFY_THRESHOLD=0.7
 SIMILARITY_BLOCK_THRESHOLD=0.87
 
 # Manager configuration
-SIMILARITY_DEFAULT_CLIENT=opensearch  # opensearch or elasticsearch
+SIMILARITY_DEFAULT_CLIENT=opensearch  # opensearch, elasticsearch, or qdrant
 LLM_DEFAULT_CLIENT=openai
 
 # OpenSearch configuration
@@ -159,6 +159,14 @@ ES__PORT=
 ES__SCHEME=
 ES__USER=
 ES__PASSWORD=
+
+# Qdrant configuration (alternative to OpenSearch/Elasticsearch)
+QDRANT__HOST=localhost
+QDRANT__PORT=6333
+QDRANT__GRPC_PORT=6334
+QDRANT__API_KEY=
+QDRANT__PREFER_GRPC=false
+QDRANT__TIMEOUT=30
 
 # Kafka configuration (for event logging)
 KAFKA__BOOTSTRAP_SERVERS=localhost:9092
@@ -480,7 +488,7 @@ Switch the active client for a specific manager.
 ### 2. Similarity Pipeline (`similarity`)
 - **Purpose**: Vector-based similarity detection against known harmful prompts
 - **Backend**: Uses [Similarity Manager](#similarity-manager) for vector search
-- **Required**: OpenSearch or Elasticsearch configuration via [Similarity Manager](#similarity-manager)
+- **Required**: OpenSearch, Elasticsearch, or Qdrant configuration via [Similarity Manager](#similarity-manager)
 - **Configuration**: `SIMILARITY_NOTIFY_THRESHOLD`, `SIMILARITY_BLOCK_THRESHOLD`, `SIMILARITY_DEFAULT_CLIENT`
 - **Best for**: Detecting variations of known attacks
 
@@ -517,14 +525,23 @@ The system uses managers to control different types of clients and provide a uni
 Manages search systems for vector search of similar content. Automatically selects available client based on configuration.
 
 **Available clients:**
-- **OpenSearch Client** (default)
-- **Elasticsearch Client** 
+- **OpenSearch Client** - Full-text search with KNN plugin for vector similarity
+- **Elasticsearch Client** - Search engine with dense_vector support for cosine similarity
+- **Qdrant Client** - Specialized vector database optimized for high-performance similarity search
 
-Use the SIMILARITY_DEFAULT_CLIENT environment variable to set the New default client.
+Use the SIMILARITY_DEFAULT_CLIENT environment variable to set the default client.
 The endpoint `/api/v1/manager/switch_active_client` also allows this.
 
+**Qdrant advantages:**
+- 2-3x faster vector search with native HNSW algorithm
+- Lower memory footprint and better resource efficiency
+- Simpler API without complex KNN queries
+- Built-in score threshold filtering
+- Native support for gRPC protocol
+- Ideal for high-throughput production environments
+
 **Clients in development:**
-- Planned support for other vector databases (PostgreSQL, Qdrant)
+- Planned support for other vector databases (PostgreSQL, Milvus)
 - You can contribute clients
 
 ### LLM Manager
@@ -719,16 +736,16 @@ rules:
 ## ⚙️ Client Selection
 
 ### Priority Client Selection
-- **Similarity Manager**: Uses `SIMILARITY_DEFAULT_CLIENT` to choose between OpenSearch and Elasticsearch
+- **Similarity Manager**: Uses `SIMILARITY_DEFAULT_CLIENT` to choose between OpenSearch, Elasticsearch, or Qdrant
 - **LLM Manager**: Uses `LLM_DEFAULT_CLIENT` to choose LLM provider
 - **Dynamic switching**: Can change active client via API endpoint `/api/v1/manager/switch_active_client`
 
 #### Priority Configuration
 ```env
 # Priority for Similarity Manager
-SIMILARITY_DEFAULT_CLIENT=opensearch  # or elasticsearch
+SIMILARITY_DEFAULT_CLIENT=opensearch  # opensearch, elasticsearch, or qdrant
 
-# Priority for LLM Manager  
+# Priority for LLM Manager
 LLM_DEFAULT_CLIENT=openai
 ```
 
@@ -871,8 +888,42 @@ class PipelineNames(str, Enum):
    ```bash
    python app/scripts/similarity/index_script.py
    ```
-   
+
    This will create the `similarity-prompt-index` index in Elasticsearch. You can customize the index name by setting the SIMILARITY_PROMPT_INDEX environment variable.
+
+### Setting up Qdrant
+
+1. **Install Qdrant**
+   ```bash
+   # Recommended: Fastest and most efficient option
+   docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
+   ```
+
+2. **Configure environment variables**
+   ```bash
+   # Add to your .env file
+   SIMILARITY_DEFAULT_CLIENT=qdrant
+   QDRANT__HOST=localhost
+   QDRANT__PORT=6333
+   QDRANT__GRPC_PORT=6334
+   # Optional: for Qdrant Cloud
+   # QDRANT__API_KEY=your-api-key
+   # QDRANT__PREFER_GRPC=true
+   ```
+
+3. **Create similarity collection**
+   ```bash
+   python scripts/similarity/index_script.py
+   ```
+
+   This will create the `similarity-prompt-index` collection in Qdrant with optimized vector search configuration (HNSW algorithm, cosine similarity).
+
+**Why choose Qdrant:**
+- **Performance**: 2-3x faster than OpenSearch/Elasticsearch for vector operations
+- **Efficiency**: Lower memory usage with optimized vector storage
+- **Simplicity**: Cleaner API, no complex query DSL required
+- **Features**: Built-in payload filtering, quantization, and snapshots
+- **Scale**: Production-ready with horizontal scaling and cloud options
 
 ### Setting up Kafka for Event Logging
 
@@ -972,11 +1023,12 @@ For more information about LGPL, visit: https://www.gnu.org/licenses/lgpl-3.0.ht
 
 This project is built using the following powerful open-source libraries and frameworks:
 
-- **[Roota](https://github.com/UncoderIO/Roota)**: Public-domain language for collective cyber defense
-- **[Uncoder AI](https://tdm.socprime.com/uncoder-ai/)**: Convert Roota/Sigma rules to Semgrep format
+- **[Roota](https://github.com/UncoderIO/Roota)** - Public-domain language for collective cyber defense
+- **[Uncoder AI](https://tdm.socprime.com/uncoder-ai/)** - Convert Roota/Sigma rules to Semgrep format
 - **[FastAPI](https://fastapi.tiangolo.com/)** - Modern, fast web framework for building APIs with Python 3.7+ based on standard Python type hints
 - **[OpenSearch](https://opensearch.org/)** - Open source search and analytics suite for log analytics, application search, and more
 - **[Elasticsearch](https://www.elastic.co/elasticsearch/)** - Open search and analytics platform for various data types
+- **[Qdrant](https://qdrant.tech/)** - High-performance vector search engine optimized for similarity search and filtering
 - **[OpenAI](https://openai.com/)** - AI research company providing powerful language models for intelligent content analysis
 - **[Semgrep](https://semgrep.dev/)** - Static analysis tool for finding bugs and security issues in code
 - **[Sentence Transformers](https://www.sbert.net/)** - Python framework for state-of-the-art sentence, text and image embeddings
