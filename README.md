@@ -272,7 +272,7 @@ Default `config.json` configuraton:
 import requests
 
 # Run pipeline analysis on a text prompt
-response = requests.post("http://localhost:8000/api/v1/run_pipeline", json={
+response = requests.post("http://localhost:8000/api/v1/flow/run", json={
     "prompt": "Your text to analyze here",
     "pipeline_flow": "base"  # Must match a flow_name from config.json
 })
@@ -282,7 +282,7 @@ print(f"Status: {result['status']}")  # allow, block, or notify
 print(f"Triggered rules: {result['result']}")
 
 # Get available flows and pipelines
-flows_response = requests.get("http://localhost:8000/api/v1/flows")
+flows_response = requests.get("http://localhost:8000/api/v1/flow/list")
 flows = flows_response.json()
 print(f"Available flows: {[flow['flow_name'] for flow in flows['flows']]}")
 
@@ -311,7 +311,7 @@ print(f"Client switched: {switch_result['status']}")
 from app.main import bastion_app
 
 # Direct usage
-result = await bastion_app.run_pipeline("Your prompt", "default")
+result = await bastion_app.run("Your prompt", "default")
 print(f"Status: {result.status}")
 for pipeline in result.pipelines:
     print(f"Pipeline: {pipeline._identifier}, Status: {pipeline.status}")
@@ -327,7 +327,7 @@ import requests
 
 def check_prompt_safety(prompt: str):
     response = requests.post(
-        "http://localhost:8000/api/v1/run_pipeline",
+        "http://localhost:8000/api/v1/flow/run",
         json={
             "prompt": prompt,
             "pipeline_flow": "security_audit"
