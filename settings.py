@@ -168,11 +168,42 @@ class Settings(BaseSettings):
     )
 
     LLM_DEFAULT_CLIENT: Optional[str] = Field(default="openai", description="Default client for LLM")
+
+    # OpenAI Configuration
     OPENAI_API_KEY: Optional[str] = Field(default="", description="API key for OpenAI ChatGPT API")
     OPENAI_MODEL: Optional[str] = Field(default="gpt-4", description="Default model for OpenAI ChatGPT API")
     OPENAI_BASE_URL: Optional[str] = Field(
         default="https://api.openai.com/v1", description="Default base URL for OpenAI ChatGPT API"
     )
+
+    # Anthropic Configuration
+    ANTHROPIC_API_KEY: Optional[str] = Field(default="", description="API key for Anthropic Claude API")
+    ANTHROPIC_MODEL: Optional[str] = Field(
+        default="claude-sonnet-4-5-20250929", description="Default model for Anthropic Claude API"
+    )
+    ANTHROPIC_BASE_URL: Optional[str] = Field(
+        default="https://api.anthropic.com", description="Default base URL for Anthropic Claude API"
+    )
+
+    # Azure OpenAI Configuration
+    AZURE_OPENAI_ENDPOINT: Optional[str] = Field(default="", description="Azure OpenAI endpoint URL")
+    AZURE_OPENAI_API_KEY: Optional[str] = Field(default="", description="Azure OpenAI API key")
+    AZURE_OPENAI_DEPLOYMENT: Optional[str] = Field(
+        default="gpt-4", description="Azure OpenAI deployment/model name"
+    )
+    AZURE_OPENAI_API_VERSION: Optional[str] = Field(
+        default="2024-02-15-preview", description="Azure OpenAI API version"
+    )
+
+    # Ollama Configuration
+    OLLAMA_BASE_URL: Optional[str] = Field(
+        default="http://localhost:11434", description="Ollama API base URL (using official Ollama library)"
+    )
+    OLLAMA_MODEL: Optional[str] = Field(default="llama3", description="Ollama model name")
+
+    # LLM Common Configuration
+    LLM_TEMPERATURE: float = Field(default=0.1, description="Temperature for LLM responses (0.0-2.0)")
+    LLM_MAX_TOKENS: int = Field(default=1000, description="Maximum tokens for LLM responses")
 
     ML_MODEL_PATH: Optional[str] = None
 

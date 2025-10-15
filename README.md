@@ -81,7 +81,11 @@ Inspired by LlamaFirewall.
 
 - Python 3.12+
 - OpenSearch, Elasticsearch, or Qdrant (via Similarity Manager)
-- OpenAI API key (for LLM Pipeline)
+- LLM API key (optional, for LLM Pipeline):
+  - OpenAI API key for GPT models, or
+  - Anthropic API key for Claude models, or
+  - Azure OpenAI credentials for enterprise deployments, or
+  - Ollama running locally for privacy-focused local LLM models
 
 ### Quick Start
 
@@ -130,10 +134,31 @@ PORT=8000
 ML_MODEL_PATH=
 
 # LLM Pipeline
-# model by default gpt-4
+LLM_DEFAULT_CLIENT=openai  # openai, anthropic, azure, or ollama
+
+# OpenAI Configuration
 OPENAI_API_KEY=
-OPENAI_MODEL=
-OPENAI_BASE_URL=
+OPENAI_MODEL=gpt-4
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# Anthropic Configuration
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+ANTHROPIC_BASE_URL=https://api.anthropic.com
+
+# Azure OpenAI Configuration
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=
+AZURE_OPENAI_DEPLOYMENT=gpt-4
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
+# Ollama Configuration (for local LLM models)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3
+
+# LLM Common Configuration (applies to all LLM providers)
+LLM_TEMPERATURE=0.1  # Temperature for LLM responses (0.0-2.0, lower = more focused)
+LLM_MAX_TOKENS=1000  # Maximum tokens for LLM responses
 
 # Similarity Pipeline
 # similarity-prompt-index by default
@@ -144,7 +169,7 @@ SIMILARITY_BLOCK_THRESHOLD=0.87
 
 # Manager configuration
 SIMILARITY_DEFAULT_CLIENT=opensearch  # opensearch, elasticsearch, or qdrant
-LLM_DEFAULT_CLIENT=openai
+LLM_DEFAULT_CLIENT=openai  # openai, anthropic, azure, or ollama
 
 # OpenSearch configuration
 OS__HOST=
@@ -505,13 +530,22 @@ Switch the active client for a specific manager.
 - **Best for**: General malicious content detection
 - **Required**: Configured environment `EMBEDDINGS_MODEL`
 
-### 5. LLM Pipeline (`openai`)
-- **Purpose**: AI-powered analysis using OpenAI GPT models
+### 5. LLM Pipeline (`llm`)
+- **Purpose**: AI-powered analysis using advanced language models
 - **Backend**: Uses [LLM Manager](#llm-manager) for text analysis
-- **Configuration**: `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `LLM_DEFAULT_CLIENT`
-- **Features**: JSON response format, configurable models, intelligent decision-making
+- **Supported Providers**:
+  - **OpenAI** - GPT-4, GPT-4 Turbo models
+  - **Anthropic** - Claude 3.5 Sonnet, Claude 3 Opus models
+  - **Azure OpenAI** - Enterprise GPT models via Microsoft Azure infrastructure
+  - **Ollama** - Local LLM models (Llama 3, Mistral, Gemma, etc.) for privacy-focused deployments
+- **Configuration**:
+  - `LLM_DEFAULT_CLIENT` - Choose provider (openai, anthropic, azure, ollama)
+  - `LLM_TEMPERATURE` - Control response randomness (0.0-2.0, default: 0.1)
+  - `LLM_MAX_TOKENS` - Maximum response length (default: 1000)
+  - Provider-specific API keys and settings
+- **Features**: JSON response format, configurable models, intelligent decision-making, multi-provider support
 - **Response Format**: Returns structured JSON with status (block/notify/allow) and reasoning
-- **Best for**: Complex reasoning and context-aware analysis
+- **Best for**: Complex reasoning, context-aware analysis, and nuanced content moderation
 
 ## 👥 Managers
 
@@ -541,20 +575,50 @@ The endpoint `/api/v1/manager/switch_active_client` also allows this.
 - Ideal for high-throughput production environments
 
 **Clients in development:**
-- Planned support for other vector databases (PostgreSQL, Milvus)
+- Planned support for other vector databases (PostgreSQL)
 - You can contribute clients
 
 ### LLM Manager
-Manages LLM providers for text analysis and classification.
+Manages LLM providers for text analysis and classification. Provides unified interface for multiple AI providers with dynamic client switching.
 
 **Available clients:**
-- **OpenAI Client** - GPT models support
+- **OpenAI Client** - GPT-4, GPT-4 Turbo models support
+- **Anthropic Client** - Claude 3.5 Sonnet, Claude 3 Opus models support
+- **Azure OpenAI Client** - Enterprise GPT models via Microsoft Azure infrastructure
+- **Ollama Client** - Local LLM models (Llama 3, Mistral, Gemma, etc.) for privacy-focused deployments
 
-Use the LLM_DEFAULT_CLIENT environment variable to set the default client.
-The endpoint `/api/v1/manager/switch_active_client` also allows this.
+Use the `LLM_DEFAULT_CLIENT` environment variable to set the default client.
+The endpoint `/api/v1/manager/switch_active_client` allows dynamic switching between providers.
+
+**Example switching between providers:**
+```python
+# Switch to Anthropic Claude
+requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json={
+    "manager_id": "llm",
+    "client_id": "anthropic"
+})
+
+# Switch to OpenAI GPT
+requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json={
+    "manager_id": "llm",
+    "client_id": "openai"
+})
+
+# Switch to Azure OpenAI
+requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json={
+    "manager_id": "llm",
+    "client_id": "azure"
+})
+
+# Switch to Ollama (local)
+requests.post("http://localhost:8000/api/v1/manager/switch_active_client", json={
+    "manager_id": "llm",
+    "client_id": "ollama"
+})
+```
 
 **Clients in development:**
-- Planned support for other LLM providers (Anthropic, Google, local models)
+- Planned support for other LLM providers (Google Gemini, Groq, Mistral)
 - You can contribute clients
 
 ## 📋 Rule Management and Customization
@@ -746,26 +810,123 @@ rules:
 SIMILARITY_DEFAULT_CLIENT=opensearch  # opensearch, elasticsearch, or qdrant
 
 # Priority for LLM Manager
-LLM_DEFAULT_CLIENT=openai
+LLM_DEFAULT_CLIENT=openai  # openai, anthropic, azure, or ollama
 ```
 
 ## ⚙️ Enabling Disabled Pipeline
 
 Some pipelines are disabled by default. To enable them:
 
-### Enable OpenAI Pipeline
+### Enable LLM Pipeline with OpenAI
 1. Configure your OpenAI API key in the .env configuration file:
    ```bash
+   LLM_DEFAULT_CLIENT=openai
    OPENAI_API_KEY=your-api-key
    OPENAI_MODEL=gpt-4
+   OPENAI_BASE_URL=https://api.openai.com/v1
+
+   # Optional: LLM Common Configuration (applies to all providers)
+   LLM_TEMPERATURE=0.1  # Lower = more focused, higher = more creative
+   LLM_MAX_TOKENS=1000  # Maximum response length
    ```
 
 2. Add to your flow in `config.json`:
    ```json
    {
        "flow_name": "base",
-       "pipelines": ["similarity", "rule", "openai"]
+       "pipelines": ["similarity", "rule", "llm"]
    }
+   ```
+
+### Enable LLM Pipeline with Anthropic Claude
+1. Configure your Anthropic API key in the .env configuration file:
+   ```bash
+   LLM_DEFAULT_CLIENT=anthropic
+   ANTHROPIC_API_KEY=your-api-key
+   ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+   ANTHROPIC_BASE_URL=https://api.anthropic.com
+
+   # Optional: LLM Common Configuration (applies to all providers)
+   LLM_TEMPERATURE=0.1  # Lower = more focused, higher = more creative
+   LLM_MAX_TOKENS=1000  # Maximum response length
+   ```
+
+2. Add to your flow in `config.json`:
+   ```json
+   {
+       "flow_name": "base",
+       "pipelines": ["similarity", "rule", "llm"]
+   }
+   ```
+
+### Enable LLM Pipeline with Azure OpenAI
+1. Configure your Azure OpenAI credentials in the .env configuration file:
+   ```bash
+   LLM_DEFAULT_CLIENT=azure
+   AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+   AZURE_OPENAI_API_KEY=your-api-key
+   AZURE_OPENAI_DEPLOYMENT=gpt-4
+   AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
+   # Optional: LLM Common Configuration (applies to all providers)
+   LLM_TEMPERATURE=0.1  # Lower = more focused, higher = more creative
+   LLM_MAX_TOKENS=1000  # Maximum response length
+   ```
+
+2. Add to your flow in `config.json`:
+   ```json
+   {
+       "flow_name": "base",
+       "pipelines": ["similarity", "rule", "llm"]
+   }
+   ```
+
+### Enable LLM Pipeline with Ollama (Local Models)
+1. Install and start Ollama:
+   ```bash
+   # Install Ollama from https://ollama.ai
+   # Pull a model (e.g., Llama 3)
+   ollama pull llama3
+
+   # Ollama automatically starts on http://localhost:11434
+   ```
+
+2. Configure Ollama in the .env configuration file:
+   ```bash
+   LLM_DEFAULT_CLIENT=ollama
+   OLLAMA_BASE_URL=http://localhost:11434
+   OLLAMA_MODEL=llama3
+
+   # Optional: LLM Common Configuration (applies to all providers)
+   LLM_TEMPERATURE=0.1  # Lower = more focused, higher = more creative
+   LLM_MAX_TOKENS=1000  # Maximum response length
+   ```
+
+3. Add to your flow in `config.json`:
+   ```json
+   {
+       "flow_name": "base",
+       "pipelines": ["similarity", "rule", "llm"]
+   }
+   ```
+
+4. Switch between providers dynamically via API:
+   ```python
+   # Switch to Anthropic
+   requests.post("http://localhost:8000/api/v1/manager/switch_active_client",
+       json={"manager_id": "llm", "client_id": "anthropic"})
+
+   # Switch to OpenAI
+   requests.post("http://localhost:8000/api/v1/manager/switch_active_client",
+       json={"manager_id": "llm", "client_id": "openai"})
+
+   # Switch to Azure OpenAI
+   requests.post("http://localhost:8000/api/v1/manager/switch_active_client",
+       json={"manager_id": "llm", "client_id": "azure"})
+
+   # Switch to Ollama
+   requests.post("http://localhost:8000/api/v1/manager/switch_active_client",
+       json={"manager_id": "llm", "client_id": "ollama"})
    ```
 
 ### Enable ML Pipeline
@@ -1028,8 +1189,11 @@ This project is built using the following powerful open-source libraries and fra
 - **[FastAPI](https://fastapi.tiangolo.com/)** - Modern, fast web framework for building APIs with Python 3.7+ based on standard Python type hints
 - **[OpenSearch](https://opensearch.org/)** - Open source search and analytics suite for log analytics, application search, and more
 - **[Elasticsearch](https://www.elastic.co/elasticsearch/)** - Open search and analytics platform for various data types
+- **[OpenAI](https://openai.com/)** - AI research company providing powerful language models (GPT-4, GPT-4 Turbo) for intelligent content analysis
+- **[Anthropic](https://www.anthropic.com/)** - AI safety company providing Claude models (Claude 3.5 Sonnet, Claude 3 Opus) for advanced reasoning and content moderation
+- **[Azure OpenAI](https://azure.microsoft.com/en-us/products/ai-services/openai-service)** - Enterprise-grade OpenAI models via Microsoft Azure infrastructure with enhanced security and compliance
+- **[Ollama](https://ollama.ai/)** - Run large language models locally with privacy-focused deployments (Llama 3, Mistral, Gemma, and more)
 - **[Qdrant](https://qdrant.tech/)** - High-performance vector search engine optimized for similarity search and filtering
-- **[OpenAI](https://openai.com/)** - AI research company providing powerful language models for intelligent content analysis
 - **[Semgrep](https://semgrep.dev/)** - Static analysis tool for finding bugs and security issues in code
 - **[Sentence Transformers](https://www.sbert.net/)** - Python framework for state-of-the-art sentence, text and image embeddings
 - **[Pydantic](https://pydantic-docs.helpmanual.io/)** - Data validation and settings management using Python type annotations
