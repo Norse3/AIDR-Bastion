@@ -1,0 +1,26 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+.git
+ops/
+tests/
+.vscode 
+README.md
+README_NORSE3.md
+scripts/
+frontends/
+
+docker-compose.yml
+Makefile
+.gitignore
+.cursorignore
+.dockerignore 
+
+# dev
+chris_todo.md
