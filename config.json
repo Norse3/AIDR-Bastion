@@ -28,5 +28,11 @@
             "rule",
             "similarity"
         ]
+    },
+    {
+        "pipeline_flow": "pii_audit",
+        "pipelines": [
+            "rule"
+        ]
     }
 ]
