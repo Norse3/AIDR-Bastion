@@ -31,6 +31,13 @@ app = FastAPI(
     root_path="/api/v1",
 )
 
+
+@app.get("/healthz", tags=["health"])
+async def healthz() -> dict:
+    """Simple health check endpoint."""
+    return {"status": "ok"}
+
+
 app.include_router(flow_router)
 app.include_router(manager_router)
 
