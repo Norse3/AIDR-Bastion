@@ -1,0 +1,23 @@
+meta {
+  name: health check
+  type: http
+  seq: 4
+}
+
+get {
+  url: http://{{server_address}}:{{server_port}}/api/v1/healthz
+  body: none
+  auth: inherit
+}
+
+body:json {
+  {
+      "prompt": "Your text to analyze here",
+      "pipeline_flow": "code_audit"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
