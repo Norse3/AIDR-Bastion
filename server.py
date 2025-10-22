@@ -28,7 +28,7 @@ app = FastAPI(
     lifespan=lifespan,
     description="API for LLM Protection",
     version="1.0.0",
-    prefix="/api/v1",
+    root_path="/api/v1",
 )
 
 app.include_router(flow_router)
