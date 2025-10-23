@@ -208,6 +208,11 @@ start: ## Starts the app
 	source $(VENV)/bin/activate
 	VERSION=${CURRENT_TAG_MICRO} python ./server.py
 
+start-litellm-proxy: ## Starts LiteLLM proxy
+	@echo "+ $@"
+	source $(VENV)/bin/activate
+	litellm --config ./litellm/config.yaml --debug --port 32539
+
 start-stack:
 	@echo "+ $@"
 	@docker compose up
