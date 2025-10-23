@@ -1,0 +1,16 @@
+meta {
+  name: List Available Models
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://0.0.0.0:{{litellm_proxy_server_port}}/models
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

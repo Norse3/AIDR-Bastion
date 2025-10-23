@@ -1,0 +1,28 @@
+meta {
+  name: test litellm - openrouter
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://0.0.0.0:{{litellm_proxy_server_port}}/chat/completions
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+      "model": "norse3",
+      "messages": [
+          {
+          "role": "user",
+          "content": "what llm are you"
+          }
+      ]
+    }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

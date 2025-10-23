@@ -1,0 +1,23 @@
+meta {
+  name: Switch active client
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://{{server_address}}:{{server_port}}/api/v1/manager/switch_active_client
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+      "manager_id": "llm",
+      "client_id": "ollama"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

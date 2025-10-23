@@ -1,11 +1,11 @@
 meta {
-  name: List flows
+  name: Get manager class
   type: http
   seq: 2
 }
 
 get {
-  url: http://{{server_address}}:{{server_port}}/api/v1/flow/list
+  url: http://{{server_address}}:{{server_port}}/api/v1/manager/{{manager_id}}
   body: none
   auth: inherit
 }
@@ -15,6 +15,10 @@ body:json {
       "prompt": "Your text to analyze here",
       "pipeline_flow": "code_audit"
   }
+}
+
+vars:pre-request {
+  manager_id: llm
 }
 
 settings {
