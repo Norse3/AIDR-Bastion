@@ -15,9 +15,29 @@ make setup PIP_CACHE_DIR=/path/to/your/cache/tmp
 
 ## Running
 
+To run you will need to;
+- run the AIDR-Bastion-Norse3 server
+- configure and run the LiteLLM Proxy server
+- verify that the stack is operational
+
+### Run AIDR-Bastion-Norse3 
+To start the AIDR-Bastion server;
 ```bash
 make start
 ```
+#### Configuring AIDR-Bastion-Norse3
+Change the settings in your .env, to set the model, etc
+
+### Configure and run the LiteLLM Proxy server
+Place your OpenRouter API Key in ./litellm/config.yaml (this will derrive from env, but is currently broken)
+
+In a new terminal, run;
+```bash
+make start-litellm-proxy
+```
+
+### Verifying the stack
+You can verify the endpoints are operational by creating requests in Bruno (frontends/bruno)
 
 ## Deployments
 
