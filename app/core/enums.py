@@ -61,6 +61,7 @@ class LLMClientNames(str, Enum):
     groq = "groq"
     mistral = "mistral"
     gemini = "gemini"
+    litellm = "litellm"
 
 
 class ManagerNames(str, Enum):

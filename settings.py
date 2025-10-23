@@ -167,7 +167,7 @@ class Settings(BaseSettings):
         default="nomic-ai/nomic-embed-text-v1.5", description="Model for embeddings"
     )
 
-    LLM_DEFAULT_CLIENT: Optional[str] = Field(default="openai", description="Default client for LLM")
+    LLM_DEFAULT_CLIENT: Optional[str] = Field(default="litellm", description="Default client for LLM")
 
     # OpenAI Configuration
     OPENAI_API_KEY: Optional[str] = Field(default="", description="API key for OpenAI ChatGPT API")
@@ -200,6 +200,12 @@ class Settings(BaseSettings):
         default="http://localhost:11434", description="Ollama API base URL (using official Ollama library)"
     )
     OLLAMA_MODEL: Optional[str] = Field(default="llama3", description="Ollama model name")
+    
+    # LiteLLM Configuration
+    LITELLM_BASE_URL: Optional[str] = Field(
+        default="http://localhost:32539", description="LiteLLM Proxy Router base URL"
+    )
+    LITELLM_MODEL: Optional[str] = Field(default="llama3", description="LiteLLM model route name")
 
     # LLM Common Configuration
     LLM_TEMPERATURE: float = Field(default=0.1, description="Temperature for LLM responses (0.0-2.0)")
