@@ -32,7 +32,8 @@
     {
         "pipeline_flow": "pii_audit",
         "pipelines": [
-            "rule"
+            "rule",
+            "llm"
         ]
     }
 ]
